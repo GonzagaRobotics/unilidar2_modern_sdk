@@ -58,6 +58,12 @@ int main(int argc, char **argv)
     {
         auto packet_type = lidar.has_data();
 
+        if (packet_type == 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
         if (packet_type == POINT_DATA_PACKET_TYPE)
         {
             auto data = lidar.get_point_data();
@@ -67,6 +73,10 @@ int main(int argc, char **argv)
         {
             auto data = lidar.get_imu_data();
             std::cout << "IMU data received: " << data.linear_acceleration[2] << std::endl;
+        }
+        else
+        {
+            lidar.ignore_data();
         }
     }
 

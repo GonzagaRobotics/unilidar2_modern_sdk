@@ -87,6 +87,17 @@ int Lidar::has_data()
     return packet_buffer_.front().packet_type;
 }
 
+void Lidar::ignore_data()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (!packet_buffer_.empty())
+    {
+        delete[] packet_buffer_.front().data;
+        packet_buffer_.pop();
+    }
+}
+
 PointData Lidar::get_point_data()
 {
     std::lock_guard<std::mutex> lock(mutex_);

@@ -46,6 +46,7 @@ public:
     ~Lidar();
 
     int has_data();
+    void ignore_data();
 
     PointData get_point_data();
     ImuData get_imu_data();
