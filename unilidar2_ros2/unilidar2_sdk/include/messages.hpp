@@ -121,6 +121,13 @@ struct PointDataPacket
     FrameTail tail;
 };
 
+struct TimeStampPacket
+{
+    FrameHeader header;
+    TimeStamp data;
+    FrameTail tail;
+};
+
 struct ImuData
 {
     DataInfo info;
