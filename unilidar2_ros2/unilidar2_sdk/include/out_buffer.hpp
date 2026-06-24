@@ -1,0 +1,41 @@
+#pragma once
+
+#include <vector>
+#include <queue>
+#include <memory>
+
+#include "pcl/point_cloud.h"
+#include "pcl/point_types.h"
+
+#include "messages.hpp"
+
+using L2Cloud = pcl::PointCloud<pcl::PointXYZI>::Ptr;
+using L2Imu = std::shared_ptr<ImuData>;
+
+class OutBuffer
+{
+private:
+    const size_t BUFFER_CAPACITY = 16;
+
+    // A queue of point clouds that have been fully filled in.
+    std::queue<L2Cloud> cloud_buffer_;
+    // The cloud that is actively being filled with points. It is not part of the buffer yet.
+    L2Cloud active_cloud_;
+    // The angle the com rotation started at when the active cloud was created.
+    float active_cloud_start_angle_ = 0.0f;
+
+    // A queue of IMU data that has been filtered.
+    std::queue<L2Imu> imu_buffer_;
+    // The IMU data that is actively being filtered. Since the IMU reports at 500Hz, the last 5 are filtered to output at 100Hz.
+    std::vector<ImuData> active_imu_;
+
+public:
+    OutBuffer() = default;
+    OutBuffer(int capacity) : BUFFER_CAPACITY(capacity) {};
+
+    L2Cloud get_cloud();
+    L2Imu get_imu();
+
+    void add_points(const PointData &points);
+    void add_imu(const ImuData &imu);
+};

@@ -17,6 +17,7 @@
 
 #include "messages.hpp"
 #include "decoder.hpp"
+#include "out_buffer.hpp"
 
 #define SEND_PACKET(t) sendto(sock_fd_, &packet, sizeof(t), 0, (const struct sockaddr *)&remote_addr_, sizeof(remote_addr_));
 
@@ -44,6 +45,7 @@ private:
     uint32_t time_sec_;
     uint32_t time_nsec_;
 
+    OutBuffer out_buffer_;
     std::queue<BufferedPacket> packet_buffer_;
     std::mutex mutex_;
     std::unique_ptr<std::thread> rx_thread_;
@@ -59,6 +61,9 @@ public:
 
     void sync_time(uint32_t time_sec, uint32_t time_nsec);
     void set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool use_serial, bool start_standby);
+
+    L2Cloud get_cloud();
+    L2Imu get_imu();
 
     // int has_data();
     // void ignore_data();

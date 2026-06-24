@@ -34,9 +34,12 @@ void Lidar::rx_worker()
                 curr_start += res.bytes_parsed;
                 curr_size -= res.bytes_parsed;
 
+                std::lock_guard<std::mutex> lock(mutex_);
+
                 // Ignore non-ack packets while waiting for an ack
                 if (wait_for_cmd_ack_)
                 {
+                    // TODO: Check that we have gotten the right ack packet for the command we sent
                     if (res.header.packet_type != ACK_DATA_PACKET_TYPE)
                     {
                         // Data needs to be freed since it won't be added to the packet buffer
@@ -47,11 +50,16 @@ void Lidar::rx_worker()
                     wait_for_cmd_ack_ = false;
                 }
 
-                std::lock_guard<std::mutex> lock(mutex_);
                 BufferedPacket packet;
                 packet.packet_type = res.header.packet_type;
                 packet.data = res.data; // Ownership of the data pointer is transferred to the packet buffer
                 packet_buffer_.push(packet);
+
+                if (packet_buffer_.size() > PACKET_BUFFER_CAPACITY)
+                {
+                    delete[] packet_buffer_.front().data;
+                    packet_buffer_.pop();
+                }
             }
             catch (const std::exception &e)
             {
@@ -146,6 +154,20 @@ void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool u
     CRC32(WorkModeConfigPacket);
 
     SEND_PACKET(WorkModeConfigPacket);
+}
+
+L2Cloud Lidar::get_cloud()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    return out_buffer_.get_cloud();
+}
+
+L2Imu Lidar::get_imu()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    return out_buffer_.get_imu();
 }
 
 // int Lidar::has_data()
