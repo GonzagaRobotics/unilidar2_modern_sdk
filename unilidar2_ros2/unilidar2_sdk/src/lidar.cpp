@@ -56,14 +56,13 @@ Lidar::Lidar(const char *local_ip, int local_port, const char *remote_ip, int re
     remote_addr_.sin_port = htons(remote_port);
 
     running_ = true;
-    rx_thread_ = std::thread(&Lidar::rx_worker, this);
-    rx_thread_.detach();
+    rx_thread_ = std::unique_ptr<std::thread>(new std::thread(&Lidar::rx_worker, this));
 }
 
 Lidar::~Lidar()
 {
     running_ = false;
-    rx_thread_.join();
+    rx_thread_->join();
 
     // Pointers in the packet buffer need to be manually freed
     while (!packet_buffer_.empty())

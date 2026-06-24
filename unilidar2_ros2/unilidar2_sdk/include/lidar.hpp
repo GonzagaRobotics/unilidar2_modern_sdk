@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdexcept>
+#include <memory>
 #include <thread>
 #include <queue>
 #include <mutex>
@@ -15,8 +16,6 @@
 
 #include "messages.hpp"
 #include "decoder.hpp"
-
-#define VAL_PACKET_TYPE 1
 
 class Lidar
 {
@@ -36,7 +35,7 @@ private:
 
     std::queue<BufferedPacket> packet_buffer_;
     std::mutex mutex_;
-    std::thread rx_thread_;
+    std::unique_ptr<std::thread> rx_thread_;
 
     void rx_worker();
 
