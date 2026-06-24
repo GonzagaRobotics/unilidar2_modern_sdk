@@ -39,6 +39,8 @@ void Lidar::rx_worker()
                 {
                     if (res.header.packet_type != ACK_DATA_PACKET_TYPE)
                     {
+                        // Data needs to be freed since it won't be added to the packet buffer
+                        delete[] res.data;
                         continue;
                     }
 
