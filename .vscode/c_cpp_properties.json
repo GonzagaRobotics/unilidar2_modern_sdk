@@ -4,7 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/include/**"
+                "/usr/include/**",
+                "/opt/ros/humble/include/**",
+                "${workspaceFolder}/unilidar2_ros2/unilidar2_sdk/include/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
