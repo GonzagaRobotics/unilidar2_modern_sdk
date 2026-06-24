@@ -17,7 +17,19 @@ int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
 
-    auto node = std::make_shared<Node>();
+    std::shared_ptr<Node> node;
+
+    try
+    {
+        node = std::make_shared<Node>();
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to create node: %s", e.what());
+        rclcpp::shutdown();
+        return 1;
+    }
+
     rclcpp::spin(node);
 
     rclcpp::shutdown();
