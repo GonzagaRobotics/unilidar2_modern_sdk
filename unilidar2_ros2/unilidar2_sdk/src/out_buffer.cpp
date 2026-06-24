@@ -18,6 +18,8 @@ L2Imu OutBuffer::get_imu()
 
 void OutBuffer::add_points(const PointData &points)
 {
+    std::cout << points.point_num << "pts at " << points.com_horizontal_angle_start << " " << points.com_horizontal_angle_step << ", " << points.angle_min << " " << points.angle_increment << std::endl;
+
     if (!active_cloud_)
     {
         active_cloud_ = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
@@ -79,4 +81,20 @@ void OutBuffer::add_imu(const ImuData &imu)
 
         active_imu_.clear();
     }
+}
+
+void OutBuffer::clear()
+{
+    while (!cloud_buffer_.empty())
+    {
+        cloud_buffer_.pop();
+    }
+    active_cloud_.reset();
+    active_cloud_start_angle_ = 0.0f;
+
+    while (!imu_buffer_.empty())
+    {
+        imu_buffer_.pop();
+    }
+    active_imu_.clear();
 }

@@ -12,6 +12,7 @@
 using L2Cloud = pcl::PointCloud<pcl::PointXYZI>::Ptr;
 using L2Imu = std::shared_ptr<ImuData>;
 
+/// @brief A buffer that processes incoming raw data and outputs usable point clouds and IMU data. Not thread-safe.
 class OutBuffer
 {
 private:
@@ -31,11 +32,13 @@ private:
 
 public:
     OutBuffer() = default;
-    OutBuffer(int capacity) : BUFFER_CAPACITY(capacity) {};
+    OutBuffer(size_t capacity) : BUFFER_CAPACITY(capacity) {};
 
     L2Cloud get_cloud();
     L2Imu get_imu();
 
     void add_points(const PointData &points);
     void add_imu(const ImuData &imu);
+
+    void clear();
 };

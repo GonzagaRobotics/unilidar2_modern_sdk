@@ -1,13 +1,16 @@
 #include <zlib.h>
 #include "lidar.hpp"
 
-void Lidar::clear_packet_buffer()
+void Lidar::buffer_packet(const DecodeRes &res)
 {
-    // Pointers in the packet buffer need to be manually freed
-    while (!packet_buffer_.empty())
+    switch (res.header.packet_type)
     {
-        delete[] packet_buffer_.front().data;
-        packet_buffer_.pop();
+    case POINT_DATA_PACKET_TYPE:
+        out_buffer_.add_points(*reinterpret_cast<PointData *>(res.data));
+        break;
+    case IMU_DATA_PACKET_TYPE:
+        out_buffer_.add_imu(*reinterpret_cast<ImuData *>(res.data));
+        break;
     }
 }
 
@@ -50,16 +53,8 @@ void Lidar::rx_worker()
                     wait_for_cmd_ack_ = false;
                 }
 
-                BufferedPacket packet;
-                packet.packet_type = res.header.packet_type;
-                packet.data = res.data; // Ownership of the data pointer is transferred to the packet buffer
-                packet_buffer_.push(packet);
-
-                if (packet_buffer_.size() > PACKET_BUFFER_CAPACITY)
-                {
-                    delete[] packet_buffer_.front().data;
-                    packet_buffer_.pop();
-                }
+                buffer_packet(res);
+                delete[] res.data; // Free the memory allocated for the packet data
             }
             catch (const std::exception &e)
             {
@@ -104,7 +99,6 @@ Lidar::~Lidar()
     running_ = false;
     rx_thread_->join();
 
-    clear_packet_buffer();
     close(sock_fd_);
 }
 
@@ -113,7 +107,7 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        clear_packet_buffer();
+        out_buffer_.clear();
         time_sec_ = time_sec;
         time_nsec_ = time_nsec;
         wait_for_cmd_ack_ = true;
@@ -136,7 +130,7 @@ void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool u
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        clear_packet_buffer();
+        out_buffer_.clear();
         wait_for_cmd_ack_ = true;
     }
 
@@ -169,74 +163,3 @@ L2Imu Lidar::get_imu()
 
     return out_buffer_.get_imu();
 }
-
-// int Lidar::has_data()
-// {
-//     std::lock_guard<std::mutex> lock(mutex_);
-
-//     if (packet_buffer_.empty())
-//     {
-//         return 0;
-//     }
-
-//     return packet_buffer_.front().packet_type;
-// }
-
-// void Lidar::ignore_data()
-// {
-//     std::lock_guard<std::mutex> lock(mutex_);
-
-//     if (!packet_buffer_.empty())
-//     {
-//         delete[] packet_buffer_.front().data;
-//         packet_buffer_.pop();
-//     }
-// }
-
-// PointData Lidar::get_point_data()
-// {
-//     std::lock_guard<std::mutex> lock(mutex_);
-
-//     if (packet_buffer_.empty())
-//     {
-//         throw std::runtime_error("No data available");
-//     }
-
-//     BufferedPacket packet = packet_buffer_.front();
-
-//     if (packet.packet_type != POINT_DATA_PACKET_TYPE)
-//     {
-//         throw std::runtime_error("Packet type is not PointDataPacket");
-//     }
-
-//     packet_buffer_.pop();
-//     PointData out;
-//     out = *reinterpret_cast<PointData *>(packet.data);
-//     delete[] packet.data;
-
-//     return out;
-// }
-
-// ImuData Lidar::get_imu_data()
-// {
-//     std::lock_guard<std::mutex> lock(mutex_);
-
-//     if (packet_buffer_.empty())
-//     {
-//         throw std::runtime_error("No data available");
-//     }
-
-//     BufferedPacket packet = packet_buffer_.front();
-
-//     if (packet.packet_type != IMU_DATA_PACKET_TYPE)
-//     {
-//         throw std::runtime_error("Packet type is not ImuDataPacket");
-//     }
-
-//     packet_buffer_.pop();
-//     ImuData out;
-//     out = *reinterpret_cast<ImuData *>(packet.data);
-//     delete[] packet.data;
-
-//     return out;
-// }

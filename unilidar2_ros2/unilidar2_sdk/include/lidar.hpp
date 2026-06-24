@@ -23,17 +23,9 @@
 
 #define CRC32(t) packet.tail.crc32 = crc32(crc32(0L, Z_NULL, 0), reinterpret_cast<const Bytef *>(&packet.data), sizeof(t));
 
-constexpr int PACKET_BUFFER_CAPACITY = 32;
-
 class Lidar
 {
 private:
-    struct BufferedPacket
-    {
-        uint32_t packet_type;
-        uint8_t *data;
-    };
-
     int sock_fd_;
     struct sockaddr_in local_addr_;
     struct sockaddr_in remote_addr_;
@@ -46,11 +38,10 @@ private:
     uint32_t time_nsec_;
 
     OutBuffer out_buffer_;
-    std::queue<BufferedPacket> packet_buffer_;
     std::mutex mutex_;
     std::unique_ptr<std::thread> rx_thread_;
 
-    void clear_packet_buffer();
+    void buffer_packet(const DecodeRes &res);
 
     void rx_worker();
 
@@ -64,10 +55,4 @@ public:
 
     L2Cloud get_cloud();
     L2Imu get_imu();
-
-    // int has_data();
-    // void ignore_data();
-
-    // PointData get_point_data();
-    // ImuData get_imu_data();
 };
