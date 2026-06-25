@@ -37,8 +37,8 @@ public:
     L2Cloud get_cloud();
     L2Imu get_imu();
 
-    void add_points(const PointData &points);
-    void add_imu(const ImuData &imu);
+    void add_points(const PointData *point_data);
+    void add_imu(const ImuData *imu_data);
 
     void clear();
 };

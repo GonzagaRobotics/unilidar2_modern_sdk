@@ -26,21 +26,21 @@ L2Imu OutBuffer::get_imu()
     return curr;
 }
 
-void OutBuffer::add_points(const PointData &points)
+void OutBuffer::add_points(const PointData *point_data)
 {
-    std::cout << points.point_num << "pts at " << points.com_horizontal_angle_start << " " << points.com_horizontal_angle_step << ", " << points.angle_min << " " << points.angle_increment << std::endl;
+    std::cout << point_data->point_num << "pts at " << point_data->com_horizontal_angle_start << " " << point_data->com_horizontal_angle_step << ", " << point_data->angle_min << " " << point_data->angle_increment << std::endl;
 
     if (!active_cloud_)
     {
         active_cloud_ = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-        active_cloud_->header.stamp = points.info.stamp.sec * 1e6 + points.info.stamp.nsec / 1e3;
+        active_cloud_->header.stamp = point_data->info.stamp.sec * 1e6 + point_data->info.stamp.nsec / 1e3;
         active_cloud_->header.frame_id = "lidar";
         active_cloud_->is_dense = true;
         active_cloud_->height = 1;
         active_cloud_->width = 0;
-        active_cloud_start_angle_ = points.com_horizontal_angle_start;
+        active_cloud_start_angle_ = point_data->com_horizontal_angle_start;
     }
-    else if (points.com_horizontal_angle_start < active_cloud_start_angle_)
+    else if (point_data->com_horizontal_angle_start < active_cloud_start_angle_)
     {
         // TODO: Is this the right condition to determine when a full rotation has been completed?
 
@@ -55,13 +55,13 @@ void OutBuffer::add_points(const PointData &points)
         active_cloud_.reset();
     }
 
-    active_cloud_->points.reserve(active_cloud_->points.size() + points.point_num);
+    active_cloud_->points.reserve(active_cloud_->points.size() + point_data->point_num);
 
-    for (uint32_t i = 0; i < points.point_num; i++)
+    for (uint32_t i = 0; i < point_data->point_num; i++)
     {
-        float range = points.ranges[i] / 1000.0f;
-        float azimuth = points.com_horizontal_angle_start + i * points.com_horizontal_angle_step;
-        float elevation = points.angle_min + i * points.angle_increment;
+        float range = point_data->ranges[i] / 1000.0f;
+        float azimuth = point_data->com_horizontal_angle_start + i * point_data->com_horizontal_angle_step;
+        float elevation = point_data->angle_min + i * point_data->angle_increment;
 
         // TODO: Apply calibration parameters to range, azimuth, elevation, etc.
         // TODO: Deskewing based on IMU data and timestamps
@@ -70,15 +70,15 @@ void OutBuffer::add_points(const PointData &points)
         point.x = range * cos(elevation) * cos(azimuth);
         point.y = range * cos(elevation) * sin(azimuth);
         point.z = range * sin(elevation);
-        point.intensity = points.intensities[i] / 255.0f;
+        point.intensity = point_data->intensities[i] / 255.0f;
 
         active_cloud_->points.push_back(point);
     }
 }
 
-void OutBuffer::add_imu(const ImuData &imu)
+void OutBuffer::add_imu(const ImuData *imu_data)
 {
-    active_imu_.push_back(imu);
+    active_imu_.push_back(*imu_data);
 
     if (active_imu_.size() == 5)
     {

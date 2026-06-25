@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstring>
+#include <memory>
 
 #include <zlib.h>
 
@@ -18,8 +19,8 @@ struct DecodeRes
 {
     FrameHeader header;
     size_t bytes_parsed;
-    // Pointer to the parsed data. Does not include the header or tail. The caller is responsible for freeing this memory.
-    uint8_t *data;
+    // The main data. Does not include the header or tail.
+    std::unique_ptr<uint8_t[]> data;
 };
 
 bool is_valid_packet_type(uint32_t packet_type);

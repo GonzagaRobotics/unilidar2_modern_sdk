@@ -6,10 +6,10 @@ void Lidar::buffer_packet(const DecodeRes &res)
     switch (res.header.packet_type)
     {
     case POINT_DATA_PACKET_TYPE:
-        out_buffer_.add_points(*reinterpret_cast<PointData *>(res.data));
+        out_buffer_.add_points(reinterpret_cast<PointData *>(res.data.get()));
         break;
     case IMU_DATA_PACKET_TYPE:
-        out_buffer_.add_imu(*reinterpret_cast<ImuData *>(res.data));
+        out_buffer_.add_imu(reinterpret_cast<ImuData *>(res.data.get()));
         break;
     }
 }
@@ -18,10 +18,18 @@ void Lidar::rx_worker()
 {
     while (running_)
     {
-        ssize_t n = recvfrom(sock_fd_, buffer_, sizeof(buffer_), 0, nullptr, nullptr);
+        // Non-blocking receive to prevent the thread from being stuck when few packets are being sent.
+        ssize_t n = recvfrom(sock_fd_, buffer_, sizeof(buffer_), MSG_DONTWAIT, nullptr, nullptr);
 
         if (n < 0)
         {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                // No data available, sleep for a short time to avoid busy waiting
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                continue;
+            }
+
             std::cerr << "recvfrom failed: " << strerror(errno) << std::endl;
             continue;
         }
@@ -45,8 +53,6 @@ void Lidar::rx_worker()
                     // TODO: Check that we have gotten the right ack packet for the command we sent
                     if (res.header.packet_type != ACK_DATA_PACKET_TYPE)
                     {
-                        // Data needs to be freed since it won't be added to the packet buffer
-                        delete[] res.data;
                         continue;
                     }
 
@@ -54,7 +60,6 @@ void Lidar::rx_worker()
                 }
 
                 buffer_packet(res);
-                delete[] res.data; // Free the memory allocated for the packet data
             }
             catch (const std::exception &e)
             {

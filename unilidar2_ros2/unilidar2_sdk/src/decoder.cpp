@@ -73,8 +73,8 @@ DecodeRes decode_packet(const uint8_t *data, size_t size)
     DecodeRes res;
     res.header = header;
     res.bytes_parsed = header.packet_size;
-    res.data = new uint8_t[data_size];
-    std::memcpy(res.data, data_start, data_size);
+    res.data = std::make_unique<uint8_t[]>(data_size);
+    std::memcpy(res.data.get(), data_start, data_size);
 
     return res;
 }
