@@ -136,7 +136,7 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
     SEND_PACKET(TimeStampPacket);
 }
 
-void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool use_serial, bool start_standby)
+void Lidar::set_work_mode(bool wide_fov)
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -155,10 +155,6 @@ void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool u
 
     packet.data.mode = 0;
     packet.data.mode |= (wide_fov ? 1 : 0) << 0;
-    packet.data.mode |= (cloud_2d ? 1 : 0) << 1;
-    packet.data.mode |= (disable_imu ? 1 : 0) << 2;
-    packet.data.mode |= (use_serial ? 1 : 0) << 3;
-    packet.data.mode |= (start_standby ? 1 : 0) << 4;
 
     CRC32(WorkModeConfig);
     packet.tail.tail[0] = FRAME_TAIL_BYTE_0;

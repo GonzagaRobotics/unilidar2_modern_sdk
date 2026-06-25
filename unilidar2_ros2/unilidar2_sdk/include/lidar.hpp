@@ -51,7 +51,8 @@ public:
     ~Lidar();
 
     void sync_time(uint32_t time_sec, uint32_t time_nsec);
-    void set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool use_serial, bool start_standby);
+    void set_work_mode(bool wide_fov);
+    // void set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool use_serial, bool start_stadby);
 
     L2Cloud get_cloud();
     L2Imu get_imu();
