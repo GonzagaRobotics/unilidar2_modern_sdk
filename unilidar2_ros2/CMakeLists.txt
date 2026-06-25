@@ -11,7 +11,7 @@ find_package(rclcpp REQUIRED)
 
 add_subdirectory(unilidar2_sdk)
 
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

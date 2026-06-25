@@ -2,6 +2,11 @@
 
 L2Cloud OutBuffer::get_cloud()
 {
+    if (cloud_buffer_.empty())
+    {
+        return nullptr;
+    }
+
     auto curr = cloud_buffer_.front();
     cloud_buffer_.pop();
 
@@ -10,6 +15,11 @@ L2Cloud OutBuffer::get_cloud()
 
 L2Imu OutBuffer::get_imu()
 {
+    if (imu_buffer_.empty())
+    {
+        return nullptr;
+    }
+
     auto curr = imu_buffer_.front();
     imu_buffer_.pop();
 
@@ -74,9 +84,9 @@ void OutBuffer::add_imu(const ImuData &imu)
     {
         // TODO: Actually filter the IMU data
         imu_buffer_.push(std::make_shared<ImuData>(active_imu_.back()));
-        if (cloud_buffer_.size() > BUFFER_CAPACITY)
+        if (imu_buffer_.size() > BUFFER_CAPACITY)
         {
-            cloud_buffer_.pop();
+            imu_buffer_.pop();
         }
 
         active_imu_.clear();

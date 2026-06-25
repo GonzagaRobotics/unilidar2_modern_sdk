@@ -19,7 +19,7 @@
 #include "decoder.hpp"
 #include "out_buffer.hpp"
 
-#define SEND_PACKET(t) sendto(sock_fd_, &packet, sizeof(t), 0, (const struct sockaddr *)&remote_addr_, sizeof(remote_addr_));
+#define SEND_PACKET(t) sendto(sock_fd_, reinterpret_cast<const char *>(&packet), sizeof(t), 0, (const struct sockaddr *)&remote_addr_, sizeof(remote_addr_));
 
 #define CRC32(t) packet.tail.crc32 = crc32(crc32(0L, Z_NULL, 0), reinterpret_cast<const Bytef *>(&packet.data), sizeof(t));
 
