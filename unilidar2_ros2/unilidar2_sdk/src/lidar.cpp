@@ -129,7 +129,7 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
     packet.data.sec = time_sec;
     packet.data.nsec = time_nsec;
 
-    CRC32(TimeStampPacket);
+    CRC32(TimeStamp);
     packet.tail.tail[0] = FRAME_TAIL_BYTE_0;
     packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
 
@@ -160,7 +160,7 @@ void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool u
     packet.data.mode |= (use_serial ? 1 : 0) << 3;
     packet.data.mode |= (start_standby ? 1 : 0) << 4;
 
-    CRC32(WorkModeConfigPacket);
+    CRC32(WorkModeConfig);
     packet.tail.tail[0] = FRAME_TAIL_BYTE_0;
     packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
 
