@@ -113,7 +113,11 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
         wait_for_cmd_ack_ = true;
     }
 
-    TimeStampPacket packet;
+    TimeStampPacket packet{};
+    packet.header.header[0] = FRAME_HEADER_BYTE_0;
+    packet.header.header[1] = FRAME_HEADER_BYTE_1;
+    packet.header.header[2] = FRAME_HEADER_BYTE_2;
+    packet.header.header[3] = FRAME_HEADER_BYTE_3;
     packet.header.packet_type = TIME_STAMP_PACKET_TYPE;
     packet.header.packet_size = sizeof(TimeStampPacket);
 
@@ -121,6 +125,8 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
     packet.data.nsec = time_nsec;
 
     CRC32(TimeStampPacket);
+    packet.tail.tail[0] = FRAME_TAIL_BYTE_0;
+    packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
 
     SEND_PACKET(TimeStampPacket);
 }
@@ -134,7 +140,11 @@ void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool u
         wait_for_cmd_ack_ = true;
     }
 
-    WorkModeConfigPacket packet;
+    WorkModeConfigPacket packet{};
+    packet.header.header[0] = FRAME_HEADER_BYTE_0;
+    packet.header.header[1] = FRAME_HEADER_BYTE_1;
+    packet.header.header[2] = FRAME_HEADER_BYTE_2;
+    packet.header.header[3] = FRAME_HEADER_BYTE_3;
     packet.header.packet_type = WORK_MODE_CONFIG_PACKET_TYPE;
     packet.header.packet_size = sizeof(WorkModeConfigPacket);
 
@@ -146,6 +156,8 @@ void Lidar::set_work_mode(bool wide_fov, bool cloud_2d, bool disable_imu, bool u
     packet.data.mode |= (start_standby ? 1 : 0) << 4;
 
     CRC32(WorkModeConfigPacket);
+    packet.tail.tail[0] = FRAME_TAIL_BYTE_0;
+    packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
 
     SEND_PACKET(WorkModeConfigPacket);
 }
