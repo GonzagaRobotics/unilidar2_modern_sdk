@@ -42,6 +42,8 @@ const uint32_t ACK_HEADER_ERROR = 3;
 const uint32_t ACK_BLOCK_ERROR = 4;
 const uint32_t ACK_WAIT_ERROR = 5;
 
+#pragma pack(push, 1)
+
 struct FrameHeader
 {
     uint8_t header[4];
@@ -215,6 +217,8 @@ struct UserCtrlCmdPacket
     UserCtrlCmd data;
     FrameTail tail;
 };
+
+#pragma pack(pop)
 
 // using LidarMessage = std::variant<PointDataPacket, ImuDataPacket, AckDataPacket, VersionDataPacket, IPAddressConfigPacket, WorkModeConfigPacket, UserCtrlCmdPacket>;
 using LidarMessage = std::variant<PointDataPacket, ImuDataPacket>;
