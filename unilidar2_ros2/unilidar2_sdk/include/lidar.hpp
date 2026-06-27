@@ -29,13 +29,12 @@ private:
     int sock_fd_;
     struct sockaddr_in local_addr_;
     struct sockaddr_in remote_addr_;
-    uint8_t buffer_[2048];
+
+    uint8_t buffer_[4096];
+    size_t buffer_used_ = 0;
 
     std::atomic<bool> running_;
     std::atomic<bool> wait_for_cmd_ack_;
-
-    uint32_t time_sec_;
-    uint32_t time_nsec_;
 
     OutBuffer out_buffer_;
     std::mutex mutex_;

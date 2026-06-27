@@ -1,4 +1,5 @@
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 
 #include "lidar.hpp"
 
@@ -15,7 +16,7 @@ public:
 
         auto now = get_clock()->now();
         lidar_.sync_time(now.nanoseconds() / 1000000000, now.nanoseconds() % 1000000000);
-        lidar_.set_work_mode(true, false, false, false, false);
+        lidar_.set_work_mode(true);
     }
 
     void timer_cb()

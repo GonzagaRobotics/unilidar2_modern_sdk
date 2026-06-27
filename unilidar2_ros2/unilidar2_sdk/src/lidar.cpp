@@ -11,6 +11,12 @@ void Lidar::buffer_packet(const DecodeRes &res)
     case IMU_DATA_PACKET_TYPE:
         out_buffer_.add_imu(reinterpret_cast<ImuData *>(res.data.get()));
         break;
+    case ACK_DATA_PACKET_TYPE:
+    {
+        auto ack = reinterpret_cast<AckData *>(res.data.get());
+        std::cout << "ACK " << ack->packet_type << " " << ack->cmd_type << " " << ack->cmd_value << " " << ack->status << std::endl;
+        break;
+    }
     }
 }
 
@@ -19,14 +25,14 @@ void Lidar::rx_worker()
     while (running_)
     {
         // Non-blocking receive to prevent the thread from being stuck when few packets are being sent.
-        ssize_t n = recvfrom(sock_fd_, buffer_, sizeof(buffer_), MSG_DONTWAIT, nullptr, nullptr);
+        ssize_t n = recvfrom(sock_fd_, buffer_ + buffer_used_, sizeof(buffer_) - buffer_used_, MSG_DONTWAIT, nullptr, nullptr);
 
         if (n < 0)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
                 // No data available, sleep for a short time to avoid busy waiting
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
                 continue;
             }
 
@@ -34,16 +40,23 @@ void Lidar::rx_worker()
             continue;
         }
 
-        uint8_t *curr_start = buffer_;
-        ssize_t curr_size = n;
+        buffer_used_ += n;
+        uint8_t *decode_ptr_ = buffer_;
 
-        while (curr_size > 0)
+        try
         {
-            try
+            while (buffer_used_ > 0)
             {
-                DecodeRes res = decode_packet(curr_start, curr_size);
-                curr_start += res.bytes_parsed;
-                curr_size -= res.bytes_parsed;
+                DecodeRes res = decode_packet(decode_ptr_, buffer_used_);
+
+                if (res.bytes_parsed == 0)
+                {
+                    // We need another packet to decode.
+                    break;
+                }
+
+                decode_ptr_ += res.bytes_parsed;
+                buffer_used_ -= res.bytes_parsed;
 
                 std::lock_guard<std::mutex> lock(mutex_);
 
@@ -61,11 +74,17 @@ void Lidar::rx_worker()
 
                 buffer_packet(res);
             }
-            catch (const std::exception &e)
-            {
-                std::cerr << "Error decoding packet: " << e.what() << std::endl;
-            }
         }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Error decoding packet: " << e.what() << std::endl;
+            // If we can't decode the packet, we can't easily know how many bytes to skip, so we have to discard the rest of the buffer.
+            buffer_used_ = 0;
+            continue;
+        }
+
+        // Move any remaining bytes to the front of the buffer for the next iteration
+        std::memmove(buffer_, decode_ptr_, buffer_used_);
     }
 }
 
@@ -113,8 +132,6 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
         std::lock_guard<std::mutex> lock(mutex_);
 
         out_buffer_.clear();
-        time_sec_ = time_sec;
-        time_nsec_ = time_nsec;
         wait_for_cmd_ack_ = true;
     }
 

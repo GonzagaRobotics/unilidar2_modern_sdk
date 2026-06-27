@@ -8,6 +8,8 @@ std::string packet_type_to_string(uint32_t packet_type)
         return "PointDataPacket";
     case IMU_DATA_PACKET_TYPE:
         return "ImuDataPacket";
+    case ACK_DATA_PACKET_TYPE:
+        return "AckDataPacket";
     default:
         return "Invalid (" + std::to_string(packet_type) + ")";
     }
@@ -16,7 +18,9 @@ std::string packet_type_to_string(uint32_t packet_type)
 bool is_valid_packet_type(uint32_t packet_type)
 {
     // TODO: Add more packet types as they are implemented
-    if (packet_type == POINT_DATA_PACKET_TYPE || packet_type == IMU_DATA_PACKET_TYPE)
+    if (packet_type == POINT_DATA_PACKET_TYPE ||
+        packet_type == IMU_DATA_PACKET_TYPE ||
+        packet_type == ACK_DATA_PACKET_TYPE)
     {
         return true;
     }
@@ -42,7 +46,9 @@ DecodeRes decode_packet(const uint8_t *data, size_t size)
     }
     if (header.packet_size > size)
     {
-        throw std::runtime_error("Packet size in header is larger than available data");
+        // Sometimes, the packet is split between two UDP packets, so we may
+        // not have the full packet yet. So we return a special result indicating that we need more data.
+        return DecodeRes{header, 0, nullptr};
     }
     if (!is_valid_packet_type(header.packet_type))
     {
@@ -55,7 +61,7 @@ DecodeRes decode_packet(const uint8_t *data, size_t size)
     // Sanity check the tail
     if (tail.tail[0] != FRAME_TAIL_BYTE_0 || tail.tail[1] != FRAME_TAIL_BYTE_1)
     {
-        throw std::runtime_error("Packet tail has corrupted end bytes");
+        throw std::runtime_error("Packet tail has corrupted end bytes " + std::to_string(tail.tail[0]) + " " + std::to_string(tail.tail[1]));
     }
 
     size_t data_size = header.packet_size - sizeof(FrameHeader) - sizeof(FrameTail);
