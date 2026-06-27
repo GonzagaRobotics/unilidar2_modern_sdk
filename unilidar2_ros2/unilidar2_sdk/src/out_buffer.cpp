@@ -28,14 +28,10 @@ L2Imu OutBuffer::get_imu()
 
 void OutBuffer::add_points(const PointData *point_data)
 {
-    // std::cout << point_data->point_num << "pts at " << point_data->com_horizontal_angle_start << " " << point_data->com_horizontal_angle_step << ", " << point_data->angle_min << " " << point_data->angle_increment << std::endl;
+    // The horizontal angle goes from 0 to 2pi, which we can use to determine when a full rotation has been completed.
 
-    if (point_data->com_horizontal_angle_start < active_cloud_start_angle_)
+    if (point_data->com_horizontal_angle_start < last_horizontal_angle_)
     {
-        // TODO: Is this the right condition to determine when a full rotation has been completed?
-
-        // active_cloud_->width = active_cloud_->points.size();
-
         cloud_buffer_.push(active_cloud_);
         if (cloud_buffer_.size() > BUFFER_CAPACITY)
         {
@@ -49,9 +45,8 @@ void OutBuffer::add_points(const PointData *point_data)
     {
         active_cloud_ = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
         active_cloud_->header.stamp = point_data->info.stamp.sec * 1e6 + point_data->info.stamp.nsec / 1e3;
-        active_cloud_->header.frame_id = "lidar";
+        active_cloud_->header.frame_id = "l2_base_link";
         active_cloud_->is_dense = true;
-        active_cloud_start_angle_ = point_data->com_horizontal_angle_start;
     }
 
     active_cloud_->points.reserve(active_cloud_->points.size() + point_data->point_num);
@@ -99,7 +94,7 @@ void OutBuffer::clear()
         cloud_buffer_.pop();
     }
     active_cloud_.reset();
-    active_cloud_start_angle_ = 0.0f;
+    last_horizontal_angle_ = -1.0f;
 
     while (!imu_buffer_.empty())
     {

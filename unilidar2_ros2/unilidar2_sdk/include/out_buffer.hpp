@@ -22,8 +22,8 @@ private:
     std::queue<L2Cloud> cloud_buffer_;
     // The cloud that is actively being filled with points. It is not part of the buffer yet.
     L2Cloud active_cloud_;
-    // The angle the com rotation started at when the active cloud was created.
-    float active_cloud_start_angle_ = 0.0f;
+    // The horizontal angle the last batch of points started at.
+    float last_horizontal_angle_ = -1.f;
 
     // A queue of IMU data that has been filtered.
     std::queue<L2Imu> imu_buffer_;
