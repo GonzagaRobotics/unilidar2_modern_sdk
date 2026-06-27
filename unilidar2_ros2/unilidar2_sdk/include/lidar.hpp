@@ -49,6 +49,8 @@ public:
     Lidar(const char *local_ip, int local_port, const char *remote_ip, int remote_port);
     ~Lidar();
 
+    bool wait_for_ack(uint64_t timeout_ms);
+
     void sync_time(uint32_t time_sec, uint32_t time_nsec);
     void set_work_mode(bool wide_fov);
 

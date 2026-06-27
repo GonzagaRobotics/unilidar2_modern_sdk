@@ -126,6 +126,26 @@ Lidar::~Lidar()
     close(sock_fd_);
 }
 
+bool Lidar::wait_for_ack(uint64_t timeout_ms)
+{
+    auto start_time = std::chrono::steady_clock::now();
+
+    while (wait_for_cmd_ack_)
+    {
+        auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+
+        if (elapsed_time.count() > timeout_ms * 1000000)
+        {
+            return false;
+        }
+
+        // Sleep for a short time to avoid busy waiting
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    return true;
+}
+
 void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
 {
     {

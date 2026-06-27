@@ -27,7 +27,16 @@ public:
 
         auto now = get_clock()->now();
         lidar_.sync_time(now.nanoseconds() / 1000000000, now.nanoseconds() % 1000000000);
+        if (!lidar_.wait_for_ack(1000))
+        {
+            RCLCPP_ERROR(get_logger(), "Failed to sync time with Lidar");
+        }
+
         lidar_.set_work_mode(true);
+        if (!lidar_.wait_for_ack(1000))
+        {
+            RCLCPP_ERROR(get_logger(), "Failed to set work mode on Lidar");
+        }
     }
 
     void timer_cb()
