@@ -34,6 +34,7 @@ private:
     size_t buffer_used_ = 0;
 
     std::atomic<bool> running_;
+    std::atomic<bool> expect_cmd_ack_;
     std::atomic<bool> wait_for_cmd_ack_;
 
     OutBuffer out_buffer_;

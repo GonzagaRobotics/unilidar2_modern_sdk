@@ -14,6 +14,7 @@ void Lidar::buffer_packet(const DecodeRes &res)
     case ACK_DATA_PACKET_TYPE:
     {
         auto ack = reinterpret_cast<AckData *>(res.data.get());
+        expect_cmd_ack_ = false;
         std::cout << "ACK " << ack->packet_type << " " << ack->cmd_type << " " << ack->cmd_value << " " << ack->status << std::endl;
         break;
     }
@@ -68,8 +69,6 @@ void Lidar::rx_worker()
                     {
                         continue;
                     }
-
-                    wait_for_cmd_ack_ = false;
                 }
 
                 buffer_packet(res);
@@ -128,9 +127,10 @@ Lidar::~Lidar()
 
 bool Lidar::wait_for_ack(int64_t timeout_ms)
 {
+    wait_for_cmd_ack_ = true;
     auto start_time = std::chrono::steady_clock::now();
 
-    while (wait_for_cmd_ack_)
+    while (expect_cmd_ack_)
     {
         auto elapsed_time = std::chrono::steady_clock::now() - start_time;
 
@@ -143,6 +143,7 @@ bool Lidar::wait_for_ack(int64_t timeout_ms)
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
+    wait_for_cmd_ack_ = false;
     return true;
 }
 
@@ -152,7 +153,7 @@ void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
         std::lock_guard<std::mutex> lock(mutex_);
 
         out_buffer_.clear();
-        wait_for_cmd_ack_ = true;
+        expect_cmd_ack_ = true;
     }
 
     TimeStampPacket packet{};
@@ -179,7 +180,7 @@ void Lidar::set_work_mode(bool wide_fov)
         std::lock_guard<std::mutex> lock(mutex_);
 
         out_buffer_.clear();
-        wait_for_cmd_ack_ = true;
+        expect_cmd_ack_ = true;
     }
 
     WorkModeConfigPacket packet{};
