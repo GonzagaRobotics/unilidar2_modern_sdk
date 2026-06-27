@@ -126,7 +126,7 @@ Lidar::~Lidar()
     close(sock_fd_);
 }
 
-bool Lidar::wait_for_ack(uint64_t timeout_ms)
+bool Lidar::wait_for_ack(int64_t timeout_ms)
 {
     auto start_time = std::chrono::steady_clock::now();
 
