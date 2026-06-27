@@ -11,6 +11,7 @@ class Node : public rclcpp::Node
 private:
     Lidar lidar_;
     rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::TimerBase::SharedPtr sync_timer_;
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
@@ -23,19 +24,30 @@ public:
         cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
         imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
 
-        timer_ = create_wall_timer(std::chrono::milliseconds(5), std::bind(&Node::timer_cb, this));
+        timer_ = create_wall_timer(std::chrono::milliseconds(1), std::bind(&Node::timer_cb, this));
+        sync_timer_ = create_wall_timer(std::chrono::seconds(1), std::bind(&Node::sync_time, this));
 
-        auto now = get_clock()->now();
-        lidar_.sync_time(now.nanoseconds() / 1000000000, now.nanoseconds() % 1000000000);
-        if (!lidar_.wait_for_ack(1000))
-        {
-            RCLCPP_ERROR(get_logger(), "Failed to sync time with Lidar");
-        }
-
+        sync_time_wait(true);
         lidar_.set_work_mode(true);
         if (!lidar_.wait_for_ack(1000))
         {
             RCLCPP_ERROR(get_logger(), "Failed to set work mode on Lidar");
+        }
+    }
+
+    void sync_time()
+    {
+        sync_time_wait(false);
+    }
+
+    void sync_time_wait(bool wait_for_ack)
+    {
+        auto now = get_clock()->now();
+        lidar_.sync_time(now.nanoseconds() / 1000000000, now.nanoseconds() % 1000000000);
+
+        if (wait_for_ack && !lidar_.wait_for_ack(1000))
+        {
+            RCLCPP_ERROR(get_logger(), "Failed to sync time with Lidar");
         }
     }
 
@@ -54,6 +66,7 @@ public:
 
         if (imu)
         {
+            // std::cout << " got imu data: " << imu->info.seq << std::endl;
             sensor_msgs::msg::Imu imu_msg;
             imu_msg.header.stamp.sec = imu->info.stamp.sec;
             imu_msg.header.stamp.nanosec = imu->info.stamp.nsec;
