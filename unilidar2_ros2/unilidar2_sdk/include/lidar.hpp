@@ -19,9 +19,20 @@
 #include "decoder.hpp"
 #include "out_buffer.hpp"
 
-#define SEND_PACKET(t) sendto(sock_fd_, reinterpret_cast<const char *>(&packet), sizeof(t), 0, (const struct sockaddr *)&remote_addr_, sizeof(remote_addr_));
+#define SET_FRAME_HEADER(t, type)                  \
+    packet.header.header[0] = FRAME_HEADER_BYTE_0; \
+    packet.header.header[1] = FRAME_HEADER_BYTE_1; \
+    packet.header.header[2] = FRAME_HEADER_BYTE_2; \
+    packet.header.header[3] = FRAME_HEADER_BYTE_3; \
+    packet.header.packet_type = type;              \
+    packet.header.packet_size = sizeof(t);
 
+#define SET_FRAME_TAIL                       \
+    packet.tail.tail[0] = FRAME_TAIL_BYTE_0; \
+    packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
 #define CRC32(t) packet.tail.crc32 = crc32(crc32(0L, Z_NULL, 0), reinterpret_cast<const Bytef *>(&packet.data), sizeof(t));
+
+#define SEND_PACKET(t) sendto(sock_fd_, reinterpret_cast<const char *>(&packet), sizeof(t), 0, (const struct sockaddr *)&remote_addr_, sizeof(remote_addr_));
 
 class Lidar
 {
