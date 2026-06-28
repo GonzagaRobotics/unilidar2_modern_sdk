@@ -75,18 +75,26 @@ void OutBuffer::add_points(const PointData *point_data)
 
 void OutBuffer::add_imu(const ImuData *imu_data)
 {
-    active_imu_.push_back(*imu_data);
+    // active_imu_.push_back(*imu_data);
 
-    if (active_imu_.size() == 5)
+    // if (active_imu_.size() > 5)
+    // {
+    //     // TODO: Filtering?
+    //     ImuData filtered_imu{};
+    //     filtered_imu.info = active_imu_.back().info;
+
+    //     if (imu_buffer_.size() > BUFFER_CAPACITY)
+    //     {
+    //         imu_buffer_.pop();
+    //     }
+
+    //     active_imu_.pop();
+    // }
+    imu_buffer_.push(std::make_shared<ImuData>(*imu_data));
+
+    if (imu_buffer_.size() > BUFFER_CAPACITY)
     {
-        // TODO: Actually filter the IMU data
-        imu_buffer_.push(std::make_shared<ImuData>(active_imu_.back()));
-        if (imu_buffer_.size() > BUFFER_CAPACITY)
-        {
-            imu_buffer_.pop();
-        }
-
-        active_imu_.clear();
+        imu_buffer_.pop();
     }
 }
 

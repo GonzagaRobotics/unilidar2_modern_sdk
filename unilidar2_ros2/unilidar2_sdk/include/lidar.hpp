@@ -37,6 +37,8 @@
 class Lidar
 {
 private:
+    TimeStamp last_imu{};
+
     int sock_fd_;
     struct sockaddr_in local_addr_;
     struct sockaddr_in remote_addr_;
