@@ -17,12 +17,26 @@ void Lidar::buffer_packet(const DecodeRes &res)
         out_buffer_.add_imu(imu);
         break;
     }
-
     case ACK_DATA_PACKET_TYPE:
     {
         auto ack = reinterpret_cast<AckData *>(res.data.get());
         expect_cmd_ack_ = false;
         std::cout << "ACK " << ack->packet_type << " " << ack->cmd_type << " " << ack->cmd_value << " " << ack->status << std::endl;
+        break;
+    }
+    case VERSION_PACKET_TYPE:
+    {
+        auto version = reinterpret_cast<VersionData *>(res.data.get());
+        std::cout << "HW V: " << version->hw_version[0] << "." << version->hw_version[1] << "." << version->hw_version[2] << "." << version->hw_version[3] << std::endl;
+        std::cout << "SW V: " << version->sw_version[0] << "." << version->sw_version[1] << "." << version->sw_version[2] << "." << version->sw_version[3] << std::endl;
+        std::cout << "Name: " << version->name << std::endl;
+        std::cout << "Date: " << version->date << std::endl;
+        std::cout << "Reserve: ";
+        for (int i = 0; i < 40; i++)
+        {
+            std::cout << std::hex << (int)version->reserve[i] << " ";
+        }
+        std::cout << std::dec << std::endl;
         break;
     }
     }
@@ -152,6 +166,20 @@ bool Lidar::wait_for_ack(int64_t timeout_ms)
 
     wait_for_cmd_ack_ = false;
     return true;
+}
+
+void Lidar::request_version()
+{
+    UserCtrlCmdPacket packet{};
+    SET_FRAME_HEADER(UserCtrlCmdPacket, COMMAND_PACKET_TYPE);
+
+    packet.data.type = USER_CMD_VERSION_GET;
+    packet.data.value = 0;
+
+    CRC32(UserCtrlCmd);
+    SET_FRAME_TAIL;
+
+    SEND_PACKET(UserCtrlCmdPacket);
 }
 
 void Lidar::sync_time(uint32_t time_sec, uint32_t time_nsec)
