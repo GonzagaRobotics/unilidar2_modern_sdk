@@ -32,7 +32,6 @@ void OutBuffer::add_points(const PointData *point_data)
 
     if (point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num < last_horizontal_angle_)
     {
-        // std::cout << "Completed a full rotation, pushing cloud to buffer with " << active_cloud_->size() << " points. Was " << last_horizontal_angle_ << " now " << point_data->com_horizontal_angle_start << std::endl;
         cloud_buffer_.push(active_cloud_);
         if (cloud_buffer_.size() > BUFFER_CAPACITY)
         {
@@ -77,9 +76,17 @@ void OutBuffer::add_points(const PointData *point_data)
 
     active_cloud_->points.reserve(active_cloud_->points.size() + point_data->point_num);
 
+    int num_zero = 0;
     for (uint32_t i = 0; i < point_data->point_num; i++)
     {
         float range = point_data->ranges[i] / 1000.0f;
+
+        if (range < point_data->range_min || range > point_data->range_max)
+        {
+            num_zero++;
+            continue;
+        }
+
         float azimuth = point_data->com_horizontal_angle_start + i * point_data->com_horizontal_angle_step;
         float elevation = point_data->angle_min + i * point_data->angle_increment;
 
@@ -94,6 +101,8 @@ void OutBuffer::add_points(const PointData *point_data)
 
         active_cloud_->push_back(point);
     }
+
+    std::cout << "Points with zero range: " << num_zero << std::endl;
 }
 
 void OutBuffer::add_imu(const ImuData *imu_data)
