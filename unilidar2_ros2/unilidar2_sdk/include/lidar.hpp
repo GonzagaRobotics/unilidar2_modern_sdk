@@ -65,6 +65,7 @@ public:
 
     bool wait_for_ack(int64_t timeout_ms);
 
+    void send_cmd(uint32_t type, uint32_t value);
     void request_version();
     void sync_time(uint32_t time_sec, uint32_t time_nsec);
     void set_work_mode(bool wide_fov);

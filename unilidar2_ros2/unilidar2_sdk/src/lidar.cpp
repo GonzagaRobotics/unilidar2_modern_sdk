@@ -18,12 +18,9 @@ void Lidar::buffer_packet(const DecodeRes &res)
         break;
     }
     case ACK_DATA_PACKET_TYPE:
-    {
-        auto ack = reinterpret_cast<AckData *>(res.data.get());
         expect_cmd_ack_ = false;
-        std::cout << "ACK " << ack->packet_type << " " << ack->cmd_type << " " << ack->cmd_value << " " << ack->status << std::endl;
+        std::cout << ack_packet_to_string(reinterpret_cast<AckData *>(res.data.get())) << std::endl;
         break;
-    }
     case VERSION_PACKET_TYPE:
     {
         auto version = reinterpret_cast<VersionData *>(res.data.get());
@@ -166,6 +163,20 @@ bool Lidar::wait_for_ack(int64_t timeout_ms)
 
     wait_for_cmd_ack_ = false;
     return true;
+}
+
+void Lidar::send_cmd(uint32_t type, uint32_t value)
+{
+    UserCtrlCmdPacket packet{};
+    SET_FRAME_HEADER(UserCtrlCmdPacket, COMMAND_PACKET_TYPE);
+
+    packet.data.type = type;
+    packet.data.value = value;
+
+    CRC32(UserCtrlCmd);
+    SET_FRAME_TAIL;
+
+    SEND_PACKET(UserCtrlCmdPacket);
 }
 
 void Lidar::request_version()

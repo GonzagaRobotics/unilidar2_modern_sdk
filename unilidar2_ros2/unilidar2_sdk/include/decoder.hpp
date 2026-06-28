@@ -25,6 +25,8 @@ struct DecodeRes
 
 bool is_valid_packet_type(uint32_t packet_type);
 
+std::string ack_packet_to_string(const AckData *ack);
+
 std::string packet_type_to_string(uint32_t packet_type);
 
 DecodeRes decode_packet(const uint8_t *data, size_t size);

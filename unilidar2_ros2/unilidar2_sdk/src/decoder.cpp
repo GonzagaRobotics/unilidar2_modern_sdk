@@ -28,6 +28,37 @@ bool is_valid_packet_type(uint32_t packet_type)
     return false;
 }
 
+std::string ack_packet_to_string(const AckData *ack)
+{
+    std::string status;
+    switch (ack->status)
+    {
+    case ACK_SUCCESS:
+        status = "ACK_SUCCESS";
+        break;
+    case ACK_CRC_ERROR:
+        status = "ACK_CRC_ERROR";
+        break;
+    case ACK_HEADER_ERROR:
+        status = "ACK_HEADER_ERROR";
+        break;
+    case ACK_BLOCK_ERROR:
+        status = "ACK_BLOCK_ERROR";
+        break;
+    case ACK_WAIT_ERROR:
+        status = "ACK_WAIT_ERROR";
+        break;
+    default:
+        status = "Unknown (" + std::to_string(ack->status) + ")";
+        break;
+    }
+
+    return "ACK packet_type: " + std::to_string(ack->packet_type) +
+           ", cmd_type: " + std::to_string(ack->cmd_type) +
+           ", cmd_value: " + std::to_string(ack->cmd_value) +
+           ", status: " + status;
+}
+
 DecodeRes decode_packet(const uint8_t *data, size_t size)
 {
     if ((size) < sizeof(FrameHeader))
