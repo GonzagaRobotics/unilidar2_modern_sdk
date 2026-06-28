@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <variant>
 
+// Constant header and tail bytes
+
 constexpr uint8_t FRAME_HEADER_BYTE_0 = 0x55;
 constexpr uint8_t FRAME_HEADER_BYTE_1 = 0xAA;
 constexpr uint8_t FRAME_HEADER_BYTE_2 = 0x05;
@@ -11,14 +13,20 @@ constexpr uint8_t FRAME_HEADER_BYTE_3 = 0x0A;
 constexpr uint8_t FRAME_TAIL_BYTE_0 = 0x00;
 constexpr uint8_t FRAME_TAIL_BYTE_1 = 0xFF;
 
+// Packet types
+
 const uint32_t ACK_DATA_PACKET_TYPE = 101;
 const uint32_t POINT_DATA_PACKET_TYPE = 102;
 
 const uint32_t IMU_DATA_PACKET_TYPE = 104;
+const uint32_t VERSION_PACKET_TYPE = 105;
 const uint32_t TIME_STAMP_PACKET_TYPE = 106;
+const uint32_t IP_ADDRESS_CONFIG_PACKET_TYPE = 108;
 
 const uint32_t COMMAND_PACKET_TYPE = 2000;
 const uint32_t WORK_MODE_CONFIG_PACKET_TYPE = 2002;
+
+// Command types
 
 const uint32_t CMD_RESET_TYPE = 1;
 const uint32_t CMD_PARAM_SAVE = 2;
@@ -36,13 +44,26 @@ const uint32_t USER_CMD_CONFIG_RESET = 5;
 const uint32_t USER_CMD_CONFIG_GET = 6;
 const uint32_t USER_CMD_CONFIG_AUTO_STANDBY = 7;
 
+// Acknowledgment status codes
+
 const uint32_t ACK_SUCCESS = 1;
 const uint32_t ACK_CRC_ERROR = 2;
 const uint32_t ACK_HEADER_ERROR = 3;
 const uint32_t ACK_BLOCK_ERROR = 4;
 const uint32_t ACK_WAIT_ERROR = 5;
 
+#define PACKET(type)        \
+    struct type##Packet     \
+    {                       \
+        FrameHeader header; \
+        type data;          \
+        FrameTail tail;     \
+    };
+
+// L2 expects exact byte alignment for the structures
 #pragma pack(push, 1)
+
+// Common structures for most/all packets
 
 struct FrameHeader
 {
@@ -65,12 +86,16 @@ struct TimeStamp
     uint32_t nsec;
 };
 
+PACKET(TimeStamp);
+
 struct DataInfo
 {
     uint32_t seq;
     uint32_t payload_size;
     TimeStamp stamp;
 };
+
+// Detailed lidar information used in the point data packet
 
 struct CalibParam
 {
@@ -97,6 +122,8 @@ struct InsideState
     float imu_temperature;
 };
 
+// Main output data structure sent by L2
+
 struct PointData
 {
     DataInfo info;
@@ -116,19 +143,7 @@ struct PointData
     uint8_t intensities[300];
 };
 
-struct PointDataPacket
-{
-    FrameHeader header;
-    PointData data;
-    FrameTail tail;
-};
-
-struct TimeStampPacket
-{
-    FrameHeader header;
-    TimeStamp data;
-    FrameTail tail;
-};
+PACKET(PointData);
 
 struct ImuData
 {
@@ -138,12 +153,9 @@ struct ImuData
     float linear_acceleration[3];
 };
 
-struct ImuDataPacket
-{
-    FrameHeader header;
-    ImuData data;
-    FrameTail tail;
-};
+PACKET(ImuData);
+
+// Config, info, and other control packets to L2
 
 struct AckData
 {
@@ -153,12 +165,7 @@ struct AckData
     uint32_t status;      // Result of command execution
 };
 
-struct AckDataPacket
-{
-    FrameHeader header;
-    AckData data;
-    FrameTail tail;
-};
+PACKET(AckData);
 
 struct VersionData
 {
@@ -169,12 +176,7 @@ struct VersionData
     uint8_t reserve[40];
 };
 
-struct VersionDataPacket
-{
-    FrameHeader header;
-    VersionData data;
-    FrameTail tail;
-};
+PACKET(VersionData);
 
 struct IpAddressConfig
 {
@@ -186,24 +188,14 @@ struct IpAddressConfig
     uint16_t user_port;  // The user's remote port
 };
 
-struct IpAddressConfigPacket
-{
-    FrameHeader header;
-    IpAddressConfig data;
-    FrameTail tail;
-};
+PACKET(IpAddressConfig);
 
 struct WorkModeConfig
 {
     uint32_t mode;
 };
 
-struct WorkModeConfigPacket
-{
-    FrameHeader header;
-    WorkModeConfig data;
-    FrameTail tail;
-};
+PACKET(WorkModeConfig);
 
 struct UserCtrlCmd
 {
@@ -211,14 +203,6 @@ struct UserCtrlCmd
     uint32_t value;
 };
 
-struct UserCtrlCmdPacket
-{
-    FrameHeader header;
-    UserCtrlCmd data;
-    FrameTail tail;
-};
+PACKET(UserCtrlCmd);
 
 #pragma pack(pop)
-
-// using LidarMessage = std::variant<PointDataPacket, ImuDataPacket, AckDataPacket, VersionDataPacket, IPAddressConfigPacket, WorkModeConfigPacket, UserCtrlCmdPacket>;
-using LidarMessage = std::variant<PointDataPacket, ImuDataPacket>;
