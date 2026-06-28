@@ -30,6 +30,11 @@ void OutBuffer::add_points(const PointData *point_data)
 {
     // The horizontal angle goes from 0 to 2pi, which we can use to determine when a full rotation has been completed.
 
+    if (last_seq_ >= 0 && point_data->info.seq != last_seq_ + 1)
+    {
+        std::cout << "Warning: PointData sequence number jumped from " << last_seq_ << " to " << point_data->info.seq << std::endl;
+    }
+
     if (point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num < last_horizontal_angle_)
     {
         cloud_buffer_.push(active_cloud_);
@@ -65,6 +70,7 @@ void OutBuffer::add_points(const PointData *point_data)
     }
 
     last_horizontal_angle_ = point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num;
+    last_seq_ = point_data->info.seq;
 
     if (!active_cloud_)
     {
