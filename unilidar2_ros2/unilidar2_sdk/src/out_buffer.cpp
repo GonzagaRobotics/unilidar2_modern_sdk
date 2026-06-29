@@ -32,7 +32,7 @@ void OutBuffer::add_points(const PointData *point_data)
 
     if (last_seq_ >= 0 && point_data->info.seq != last_seq_ + 1)
     {
-        std::cout << "Warning: PointData sequence number jumped from " << last_seq_ << " to " << point_data->info.seq << std::endl;
+        // std::cout << "Warning: PointData sequence number jumped from " << last_seq_ << " to " << point_data->info.seq << std::endl;
     }
 
     if (point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num < last_horizontal_angle_)
@@ -46,28 +46,28 @@ void OutBuffer::add_points(const PointData *point_data)
         active_cloud_.reset();
     }
 
-    if (last_horizontal_angle_ < 0.f)
-    {
-        std::cout << "Lidar state at init:" << std::endl
-                  << "  sys_rotation_period: " << point_data->state.sys_rotation_period << std::endl
-                  << "  com_rotation_period: " << point_data->state.com_rotation_period << std::endl
-                  << "  dirty_index: " << point_data->state.dirty_index << std::endl
-                  << "  packet_lost_up: " << point_data->state.packet_lost_up << std::endl
-                  << "  packet_lost_down: " << point_data->state.packet_lost_down << std::endl
-                  << "  apd_temperature: " << point_data->state.apd_temperature << std::endl
-                  << "  apd_voltage: " << point_data->state.apd_voltage << std::endl
-                  << "  laser_voltage: " << point_data->state.laser_voltage << std::endl
-                  << "  imu_temperature: " << point_data->state.imu_temperature << std::endl;
-        std::cout << "Lidar calibration parameters:" << std::endl
-                  << "  a_axis_dist: " << point_data->param.a_axis_dist << std::endl
-                  << "  b_axis_dist: " << point_data->param.b_axis_dist << std::endl
-                  << "  theta_angle_bias: " << point_data->param.theta_angle_bias << std::endl
-                  << "  alpha_angle_bias: " << point_data->param.alpha_angle_bias << std::endl
-                  << "  beta_angle: " << point_data->param.beta_angle << std::endl
-                  << "  xi_angle: " << point_data->param.xi_angle << std::endl
-                  << "  range_bias: " << point_data->param.range_bias << std::endl
-                  << "  range_scale: " << point_data->param.range_scale << std::endl;
-    }
+    // if (last_horizontal_angle_ < 0.f)
+    // {
+    //     std::cout << "Lidar state at init:" << std::endl
+    //               << "  sys_rotation_period: " << point_data->state.sys_rotation_period << std::endl
+    //               << "  com_rotation_period: " << point_data->state.com_rotation_period << std::endl
+    //               << "  dirty_index: " << point_data->state.dirty_index << std::endl
+    //               << "  packet_lost_up: " << point_data->state.packet_lost_up << std::endl
+    //               << "  packet_lost_down: " << point_data->state.packet_lost_down << std::endl
+    //               << "  apd_temperature: " << point_data->state.apd_temperature << std::endl
+    //               << "  apd_voltage: " << point_data->state.apd_voltage << std::endl
+    //               << "  laser_voltage: " << point_data->state.laser_voltage << std::endl
+    //               << "  imu_temperature: " << point_data->state.imu_temperature << std::endl;
+    //     std::cout << "Lidar calibration parameters:" << std::endl
+    //               << "  a_axis_dist: " << point_data->param.a_axis_dist << std::endl
+    //               << "  b_axis_dist: " << point_data->param.b_axis_dist << std::endl
+    //               << "  theta_angle_bias: " << point_data->param.theta_angle_bias << std::endl
+    //               << "  alpha_angle_bias: " << point_data->param.alpha_angle_bias << std::endl
+    //               << "  beta_angle: " << point_data->param.beta_angle << std::endl
+    //               << "  xi_angle: " << point_data->param.xi_angle << std::endl
+    //               << "  range_bias: " << point_data->param.range_bias << std::endl
+    //               << "  range_scale: " << point_data->param.range_scale << std::endl;
+    // }
 
     last_horizontal_angle_ = point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num;
     last_seq_ = point_data->info.seq;
@@ -108,7 +108,10 @@ void OutBuffer::add_points(const PointData *point_data)
         active_cloud_->push_back(point);
     }
 
-    std::cout << "Points with zero range: " << num_zero << std::endl;
+    if (num_zero > 0)
+    {
+        // std::cout << "Warning: " << num_zero << " points with zero range in this packet" << std::endl;
+    }
 }
 
 void OutBuffer::add_imu(const ImuData *imu_data)

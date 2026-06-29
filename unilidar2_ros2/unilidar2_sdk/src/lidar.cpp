@@ -12,7 +12,7 @@ void Lidar::buffer_packet(const DecodeRes &res)
     {
         auto imu = reinterpret_cast<ImuData *>(res.data.get());
         double diff = (imu->info.stamp.sec - last_imu.sec) + (imu->info.stamp.nsec - last_imu.nsec) / 1e9;
-        std::cout << "Imu took " << (int)(diff * 1000) << " ms since last imu" << std::endl;
+        // std::cout << "Imu took " << (int)(diff * 1000) << " ms since last imu" << std::endl;
         last_imu = imu->info.stamp;
         out_buffer_.add_imu(imu);
         break;
@@ -24,14 +24,24 @@ void Lidar::buffer_packet(const DecodeRes &res)
     case VERSION_PACKET_TYPE:
     {
         auto version = reinterpret_cast<VersionData *>(res.data.get());
-        std::cout << "HW V: " << version->hw_version[0] << "." << version->hw_version[1] << "." << version->hw_version[2] << "." << version->hw_version[3] << std::endl;
-        std::cout << "SW V: " << version->sw_version[0] << "." << version->sw_version[1] << "." << version->sw_version[2] << "." << version->sw_version[3] << std::endl;
+        std::cout << "HW V: " << std::to_string(version->hw_version[0]) << "." << std::to_string(version->hw_version[1]) << "." << std::to_string(version->hw_version[2]) << "." << std::to_string(version->hw_version[3]) << std::endl;
+        std::cout << "SW V: " << std::to_string(version->sw_version[0]) << "." << std::to_string(version->sw_version[1]) << "." << std::to_string(version->sw_version[2]) << "." << std::to_string(version->sw_version[3]) << std::endl;
         std::cout << "Name: " << version->name << std::endl;
         std::cout << "Date: " << version->date << std::endl;
         std::cout << "Reserve: ";
         for (int i = 0; i < 40; i++)
         {
             std::cout << std::hex << (int)version->reserve[i] << " ";
+        }
+        std::cout << std::dec << std::endl;
+        break;
+    }
+    case PARAM_PACKET_TYPE:
+    {
+        std::cout << "Received PARAM packet" << std::endl;
+        for (size_t i = 0; i < res.header.packet_size; i++)
+        {
+            std::cout << std::hex << (int)res.data[i] << " ";
         }
         std::cout << std::dec << std::endl;
         break;

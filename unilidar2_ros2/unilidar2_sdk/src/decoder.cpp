@@ -20,7 +20,9 @@ bool is_valid_packet_type(uint32_t packet_type)
     // TODO: Add more packet types as they are implemented
     if (packet_type == POINT_DATA_PACKET_TYPE ||
         packet_type == IMU_DATA_PACKET_TYPE ||
-        packet_type == ACK_DATA_PACKET_TYPE)
+        packet_type == ACK_DATA_PACKET_TYPE ||
+        packet_type == VERSION_PACKET_TYPE ||
+        packet_type == PARAM_PACKET_TYPE)
     {
         return true;
     }

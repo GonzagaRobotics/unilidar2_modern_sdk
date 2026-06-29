@@ -24,6 +24,7 @@ const uint32_t TIME_STAMP_PACKET_TYPE = 106;
 const uint32_t IP_ADDRESS_CONFIG_PACKET_TYPE = 108;
 
 const uint32_t COMMAND_PACKET_TYPE = 2000;
+const uint32_t PARAM_PACKET_TYPE = 2001;
 const uint32_t WORK_MODE_CONFIG_PACKET_TYPE = 2002;
 
 // Command types
@@ -38,7 +39,7 @@ const uint32_t CMD_CONFIG_RESET = 7;
 
 const uint32_t USER_CMD_RESET_TYPE = 1;
 const uint32_t USER_CMD_STANDBY_TYPE = 2;
-const uint32_t USER_CMD_VERSION_GET = 3;
+const uint32_t USER_CMD_VERSION_GET = 3; // Actually 4
 const uint32_t USER_CMD_LATENCY_TYPE = 4;
 const uint32_t USER_CMD_CONFIG_RESET = 5;
 const uint32_t USER_CMD_CONFIG_GET = 6;
