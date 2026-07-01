@@ -24,6 +24,7 @@ private:
     L2Cloud active_cloud_;
     // The horizontal angle the last batch of points started at.
     float last_horizontal_angle_ = -1.f;
+    int cloud_seq_ = 0;
 
     // A queue of IMU data after downsampling.
     std::queue<L2Imu> imu_buffer_;

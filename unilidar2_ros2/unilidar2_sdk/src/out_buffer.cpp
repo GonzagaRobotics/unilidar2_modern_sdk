@@ -46,6 +46,13 @@ void OutBuffer::add_points(const PointData *point_data)
 
     // TODO: Mid-packet wraps and out of order packets
 
+    cloud_seq_ -= point_data->info.seq;
+
+    if (cloud_seq_ != 0)
+    {
+        std::cerr << "PointData packet out of order by " << cloud_seq_ << std::endl;
+    }
+
     // Intermediate calibration values
     float sin_beta = sin(point_data->param.beta_angle);
     float cos_beta = cos(point_data->param.beta_angle);
@@ -75,6 +82,7 @@ void OutBuffer::add_points(const PointData *point_data)
     }
 
     last_horizontal_angle_ = theta_b + theta_s * num_pts;
+    cloud_seq_ = (cloud_seq_ + point_data->info.seq + 1) % 1025;
 
     // If the active cloud is null at this point, it means we need to wait.
     if (!active_cloud_)
