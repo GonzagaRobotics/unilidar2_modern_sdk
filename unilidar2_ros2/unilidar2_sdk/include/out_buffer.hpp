@@ -16,7 +16,7 @@ using L2Imu = std::shared_ptr<ImuData>;
 class OutBuffer
 {
 private:
-    const size_t BUFFER_CAPACITY = 1024;
+    const size_t BUFFER_CAPACITY = 32;
 
     // A queue of point clouds that have been fully filled in.
     std::queue<L2Cloud> cloud_buffer_;
@@ -24,7 +24,6 @@ private:
     L2Cloud active_cloud_;
     // The horizontal angle the last batch of points started at.
     float last_horizontal_angle_ = -1.f;
-    int last_seq_ = -1;
 
     // A queue of IMU data that has been filtered.
     std::queue<L2Imu> imu_buffer_;

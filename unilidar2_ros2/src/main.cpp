@@ -35,8 +35,6 @@ public:
         {
             RCLCPP_ERROR(get_logger(), "Failed to set work mode on Lidar");
         }
-        // lidar_.request_version();
-        // lidar_.send_cmd(USER_CMD_VERSION_GET, 0);
     }
 
     void sync_time()
@@ -70,7 +68,6 @@ public:
 
         if (imu)
         {
-            // std::cout << " got imu data: " << imu->info.seq << std::endl;
             sensor_msgs::msg::Imu imu_msg;
             imu_msg.header.stamp.sec = imu->info.stamp.sec;
             imu_msg.header.stamp.nanosec = imu->info.stamp.nsec;

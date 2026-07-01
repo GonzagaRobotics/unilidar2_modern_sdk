@@ -122,21 +122,6 @@ void OutBuffer::add_points(const PointData *point_data)
 
 void OutBuffer::add_imu(const ImuData *imu_data)
 {
-    // active_imu_.push_back(*imu_data);
-
-    // if (active_imu_.size() > 5)
-    // {
-    //     // TODO: Filtering?
-    //     ImuData filtered_imu{};
-    //     filtered_imu.info = active_imu_.back().info;
-
-    //     if (imu_buffer_.size() > BUFFER_CAPACITY)
-    //     {
-    //         imu_buffer_.pop();
-    //     }
-
-    //     active_imu_.pop();
-    // }
     if (++imu_idx_ >= 1)
     {
         imu_idx_ = 0;
