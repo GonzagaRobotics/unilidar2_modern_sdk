@@ -16,7 +16,7 @@ using L2Imu = std::shared_ptr<ImuData>;
 class OutBuffer
 {
 private:
-    const size_t BUFFER_CAPACITY = 16;
+    const size_t BUFFER_CAPACITY = 1024;
 
     // A queue of point clouds that have been fully filled in.
     std::queue<L2Cloud> cloud_buffer_;
@@ -30,6 +30,9 @@ private:
     std::queue<L2Imu> imu_buffer_;
     // The IMU data that is actively being filtered. Since the IMU reports at 500Hz, the last 5 are filtered to output at 100Hz.
     std::vector<ImuData> active_imu_;
+    int imu_idx_;
+
+    void finish_active_cloud();
 
 public:
     OutBuffer() = default;

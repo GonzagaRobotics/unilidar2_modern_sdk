@@ -11,7 +11,7 @@ void Lidar::buffer_packet(const DecodeRes &res)
     case IMU_DATA_PACKET_TYPE:
     {
         auto imu = reinterpret_cast<ImuData *>(res.data.get());
-        double diff = (imu->info.stamp.sec - last_imu.sec) + (imu->info.stamp.nsec - last_imu.nsec) / 1e9;
+        // double diff = (imu->info.stamp.sec - last_imu.sec) + (imu->info.stamp.nsec - last_imu.nsec) / 1e9;
         // std::cout << "Imu took " << (int)(diff * 1000) << " ms since last imu" << std::endl;
         last_imu = imu->info.stamp;
         out_buffer_.add_imu(imu);

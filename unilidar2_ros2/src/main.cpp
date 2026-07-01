@@ -21,11 +21,13 @@ private:
 public:
     Node() : rclcpp::Node("unilidar2_node", "l2"), lidar_("192.168.1.2", 6201, "192.168.1.62", 6101), tf_broadcaster_(this)
     {
+        auto rt_qos = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile();
+
         cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
-        imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
+        imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", rt_qos);
 
         timer_ = create_wall_timer(std::chrono::milliseconds(1), std::bind(&Node::timer_cb, this));
-        sync_timer_ = create_wall_timer(std::chrono::seconds(1), std::bind(&Node::sync_time, this));
+        sync_timer_ = create_wall_timer(std::chrono::seconds(2), std::bind(&Node::sync_time, this));
 
         sync_time_wait(true);
         lidar_.set_work_mode(true);
@@ -33,6 +35,8 @@ public:
         {
             RCLCPP_ERROR(get_logger(), "Failed to set work mode on Lidar");
         }
+        // lidar_.request_version();
+        // lidar_.send_cmd(USER_CMD_VERSION_GET, 0);
     }
 
     void sync_time()

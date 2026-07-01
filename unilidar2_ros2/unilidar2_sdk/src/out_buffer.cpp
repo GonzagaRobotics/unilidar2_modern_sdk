@@ -1,5 +1,19 @@
 #include "out_buffer.hpp"
 
+void OutBuffer::finish_active_cloud()
+{
+    if (active_cloud_ && !active_cloud_->empty())
+    {
+        if (cloud_buffer_.size() >= BUFFER_CAPACITY)
+        {
+            cloud_buffer_.pop();
+        }
+
+        cloud_buffer_.push(active_cloud_);
+        active_cloud_.reset();
+    }
+}
+
 L2Cloud OutBuffer::get_cloud()
 {
     if (cloud_buffer_.empty())
@@ -30,87 +44,79 @@ void OutBuffer::add_points(const PointData *point_data)
 {
     // The horizontal angle goes from 0 to 2pi, which we can use to determine when a full rotation has been completed.
 
-    if (last_seq_ >= 0 && point_data->info.seq != last_seq_ + 1)
+    // TODO: Mid-packet wraps and out of order packets
+
+    // Intermediate calibration values
+    float sin_beta = sin(point_data->param.beta_angle);
+    float cos_beta = cos(point_data->param.beta_angle);
+    float sin_xi = sin(point_data->param.xi_angle);
+    float cos_xi = cos(point_data->param.xi_angle);
+    float cos_beta_sin_xi = cos_beta * sin_xi;
+    float sin_beta_cos_xi = sin_beta * cos_xi;
+    float cos_beta_cos_xi = cos_beta * cos_xi;
+    float sin_beta_sin_xi = sin_beta * sin_xi;
+
+    int num_pts = point_data->point_num;
+    float theta_b = point_data->com_horizontal_angle_start;
+    float theta_c = theta_b;
+    float theta_s = point_data->com_horizontal_angle_step;
+    float alpha_b = point_data->angle_min;
+    float alpha_c = alpha_b;
+    float alpha_s = point_data->angle_increment;
+
+    if (last_horizontal_angle_ >= 0.f && theta_b < last_horizontal_angle_)
     {
-        // std::cout << "Warning: PointData sequence number jumped from " << last_seq_ << " to " << point_data->info.seq << std::endl;
-    }
+        finish_active_cloud();
 
-    if (point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num < last_horizontal_angle_)
-    {
-        cloud_buffer_.push(active_cloud_);
-        if (cloud_buffer_.size() > BUFFER_CAPACITY)
-        {
-            cloud_buffer_.pop();
-        }
-
-        active_cloud_.reset();
-    }
-
-    // if (last_horizontal_angle_ < 0.f)
-    // {
-    //     std::cout << "Lidar state at init:" << std::endl
-    //               << "  sys_rotation_period: " << point_data->state.sys_rotation_period << std::endl
-    //               << "  com_rotation_period: " << point_data->state.com_rotation_period << std::endl
-    //               << "  dirty_index: " << point_data->state.dirty_index << std::endl
-    //               << "  packet_lost_up: " << point_data->state.packet_lost_up << std::endl
-    //               << "  packet_lost_down: " << point_data->state.packet_lost_down << std::endl
-    //               << "  apd_temperature: " << point_data->state.apd_temperature << std::endl
-    //               << "  apd_voltage: " << point_data->state.apd_voltage << std::endl
-    //               << "  laser_voltage: " << point_data->state.laser_voltage << std::endl
-    //               << "  imu_temperature: " << point_data->state.imu_temperature << std::endl;
-    //     std::cout << "Lidar calibration parameters:" << std::endl
-    //               << "  a_axis_dist: " << point_data->param.a_axis_dist << std::endl
-    //               << "  b_axis_dist: " << point_data->param.b_axis_dist << std::endl
-    //               << "  theta_angle_bias: " << point_data->param.theta_angle_bias << std::endl
-    //               << "  alpha_angle_bias: " << point_data->param.alpha_angle_bias << std::endl
-    //               << "  beta_angle: " << point_data->param.beta_angle << std::endl
-    //               << "  xi_angle: " << point_data->param.xi_angle << std::endl
-    //               << "  range_bias: " << point_data->param.range_bias << std::endl
-    //               << "  range_scale: " << point_data->param.range_scale << std::endl;
-    // }
-
-    last_horizontal_angle_ = point_data->com_horizontal_angle_start + point_data->com_horizontal_angle_step * point_data->point_num;
-    last_seq_ = point_data->info.seq;
-
-    if (!active_cloud_)
-    {
         active_cloud_ = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
         active_cloud_->header.stamp = point_data->info.stamp.sec * 1e6 + point_data->info.stamp.nsec / 1e3;
         active_cloud_->header.frame_id = "l2_base_link";
         active_cloud_->is_dense = true;
     }
 
-    active_cloud_->points.reserve(active_cloud_->points.size() + point_data->point_num);
+    last_horizontal_angle_ = theta_b + theta_s * num_pts;
 
-    int num_zero = 0;
-    for (uint32_t i = 0; i < point_data->point_num; i++)
+    // If the active cloud is null at this point, it means we need to wait.
+    if (!active_cloud_)
     {
-        float range = point_data->ranges[i] / 1000.0f;
+        return;
+    }
 
-        if (range < point_data->range_min || range > point_data->range_max)
+    active_cloud_->points.reserve(active_cloud_->points.size() + num_pts);
+
+    for (int i = 0; i < num_pts; i++, theta_c += theta_s, alpha_c += alpha_s)
+    {
+        // Skip points of range 0, which are invalid.
+        if (point_data->ranges[i] == 0)
         {
-            num_zero++;
             continue;
         }
 
-        float azimuth = point_data->com_horizontal_angle_start + i * point_data->com_horizontal_angle_step;
-        float elevation = point_data->angle_min + i * point_data->angle_increment;
+        // Convert to meters and apply its calibration.
+        float range = point_data->param.range_scale * (point_data->ranges[i] + point_data->param.range_bias);
 
-        // TODO: Apply calibration parameters to range, azimuth, elevation, etc.
-        // TODO: Deskewing based on IMU data and timestamps
+        // Skip points outside the valid range.
+        if (range < point_data->range_min || range > point_data->range_max)
+        {
+            continue;
+        }
+
+        // Transform to cartesian coordinates and add in calibration
+        float sin_theta = sin(theta_c);
+        float cos_theta = cos(theta_c);
+        float sin_alpha = sin(alpha_c);
+        float cos_alpha = cos(alpha_c);
+
+        float A = (-cos_beta_sin_xi * sin_beta_cos_xi * sin_alpha) * range + point_data->param.b_axis_dist;
+        float B = cos_alpha * cos_xi * range;
+        float C = (sin_beta_sin_xi + cos_beta_cos_xi * sin_alpha) * range;
 
         pcl::PointXYZI point;
-        point.x = range * cos(elevation) * cos(azimuth);
-        point.y = range * cos(elevation) * sin(azimuth);
-        point.z = range * sin(elevation);
+        point.x = A * cos_theta - B * sin_theta;
+        point.y = A * sin_theta + B * cos_theta;
+        point.z = C + point_data->param.a_axis_dist;
         point.intensity = point_data->intensities[i] / 255.0f;
-
         active_cloud_->push_back(point);
-    }
-
-    if (num_zero > 0)
-    {
-        // std::cout << "Warning: " << num_zero << " points with zero range in this packet" << std::endl;
     }
 }
 
@@ -131,11 +137,15 @@ void OutBuffer::add_imu(const ImuData *imu_data)
 
     //     active_imu_.pop();
     // }
-    imu_buffer_.push(std::make_shared<ImuData>(*imu_data));
-
-    if (imu_buffer_.size() > BUFFER_CAPACITY)
+    if (++imu_idx_ >= 1)
     {
-        imu_buffer_.pop();
+        imu_idx_ = 0;
+        imu_buffer_.push(std::make_shared<ImuData>(*imu_data));
+
+        if (imu_buffer_.size() > BUFFER_CAPACITY)
+        {
+            imu_buffer_.pop();
+        }
     }
 }
 

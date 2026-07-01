@@ -106,7 +106,7 @@ struct CalibParam
     float alpha_angle_bias; // radians
     float beta_angle;       // radians
     float xi_angle;         // radians
-    float range_bias;       // meters
+    float range_bias;       // millimeters
     float range_scale;      // unitless
 };
 
