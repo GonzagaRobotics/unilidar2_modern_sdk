@@ -122,9 +122,12 @@ void OutBuffer::add_points(const PointData *point_data)
 
 void OutBuffer::add_imu(const ImuData *imu_data)
 {
-    if (++imu_idx_ >= 1)
+    // IMU data comes in at 250 Hz, but we want 100 Hz. So we need to alternate between keeping every 2 and 3 packets.
+    // This averages out to every 2.5 packets, which is close enough to 100 Hz.
+    imu_idx_ = (imu_idx_ + 1) % 5;
+
+    if (imu_idx_ == 0 || imu_idx_ == 2)
     {
-        imu_idx_ = 0;
         imu_buffer_.push(std::make_shared<ImuData>(*imu_data));
 
         if (imu_buffer_.size() > BUFFER_CAPACITY)
@@ -147,5 +150,5 @@ void OutBuffer::clear()
     {
         imu_buffer_.pop();
     }
-    active_imu_.clear();
+    imu_idx_ = 0;
 }

@@ -25,10 +25,9 @@ private:
     // The horizontal angle the last batch of points started at.
     float last_horizontal_angle_ = -1.f;
 
-    // A queue of IMU data that has been filtered.
+    // A queue of IMU data after downsampling.
     std::queue<L2Imu> imu_buffer_;
-    // The IMU data that is actively being filtered. Since the IMU reports at 500Hz, the last 5 are filtered to output at 100Hz.
-    std::vector<ImuData> active_imu_;
+    // Index of IMU packets to keep track for downsampling.
     int imu_idx_;
 
     void finish_active_cloud();
