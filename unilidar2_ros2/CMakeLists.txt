@@ -5,7 +5,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -31,6 +32,12 @@ endif()
 add_executable(unilidar2_node src/main.cpp)
 target_link_libraries(unilidar2_node unilidar2_sdk)
 ament_target_dependencies(unilidar2_node rclcpp sensor_msgs tf2_ros pcl_conversions)
+
+# Install launch files to the share directory
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 install(TARGETS unilidar2_node DESTINATION lib/${PROJECT_NAME})
 ament_package()

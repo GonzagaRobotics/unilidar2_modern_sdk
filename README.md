@@ -13,7 +13,7 @@ For the core SDK, only `zlib` and `PCL` are needed. C++ 17 is used.
 The simplest way is to build the ROS2 node.
 
 ```bash
-colcon build --symlink-install
+colcon build
 ```
 
 The core SDK can be built with CMake as a static library.
