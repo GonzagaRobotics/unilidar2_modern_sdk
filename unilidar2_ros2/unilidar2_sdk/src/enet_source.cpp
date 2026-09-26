@@ -1,5 +1,7 @@
 #include "unilidar2_sdk/enet_source.hpp"
 
+#include <stdexcept>
+
 unilidar2::EnetSource::EnetSource(
   const std::string & local_ip, uint16_t local_port, const std::string & remote_ip, uint16_t remote_port)
 {

@@ -1,5 +1,7 @@
 #include "source.hpp"
 
+#include <iostream>
+
 #include "decoding.hpp"
 
 void unilidar2::Source::rx_worker()

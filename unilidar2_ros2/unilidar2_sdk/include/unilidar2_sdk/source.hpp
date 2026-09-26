@@ -3,13 +3,9 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <thread>
-
-#include "decoding.hpp"
-#include "messages.hpp"
 
 namespace unilidar2
 {
