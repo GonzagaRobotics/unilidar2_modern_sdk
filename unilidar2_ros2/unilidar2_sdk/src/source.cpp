@@ -1,44 +1,41 @@
 #include "source.hpp"
 
+#include "decoding.hpp"
+
 void unilidar2::Source::rx_worker()
 {
   while (running_) {
+    size_t buffer_head = 0;
+    size_t n;
+
     try {
-      size_t n = get_data(buffer_, sizeof(buffer_));
-
-      if (n > 0 && n < 12) {
-        std::cout << "too short: " << std::hex;
-        for (size_t i = 0; i < n; i++) {
-          std::cout << buffer_[i];
-        }
-
-        std::cout << std::dec << std::endl;
-      } else if (n >= 12) {
-        FrameHeader header = parse_frame_header(buffer_);
-        std::cout << "got " << packet_type_to_string(header.packet_type) << " " << header.packet_size << " bytes"
-                  << std::endl;
-        if (n >= header.packet_size) {
-          FrameTail tail = parse_frame_tail(buffer_ + header.packet_size - 12);
-          if (!validate_frame_ends(header, tail)) {
-            std::cout << "invalid frame" << std::endl;
-          }
-
-          if (!validate_crc(buffer_ + 12, header.packet_size - 24, tail.crc32)) {
-            std::cout << "invalid CRC" << std::endl;
-          }
-
-          if (n - header.packet_size > 0) {
-            std::cout << "extra data after frame: " << n - header.packet_size << " bytes" << std::endl;
-          }
-        } else {
-          std::cout << "incomplete frame expected " << header.packet_size << " got " << n << std::endl;
-        }
-      }
+      n = get_data(buffer_, sizeof(buffer_));
     } catch (const std::exception & e) {
-      std::cerr << "Error in rx_worker: " << e.what() << std::endl;
+      std::cerr << "Error in get_data: " << e.what() << std::endl;
+
+      SLEEP_2;
+      continue;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    if (n == 0) {
+      SLEEP_2;
+      continue;
+    }
+
+    while (n - buffer_head > 0) {
+      DecodeRes res;
+      try {
+        res = decode_packet(buffer_ + buffer_head, n - buffer_head);
+      } catch (const DecodeException & e) {
+        std::cerr << "Error decoding packet: " << e.what() << std::endl;
+        break;
+      }
+
+      // TODO: Process the packet
+      buffer_head += res.size + 24;  // Move past the packet header and tail
+    }
+
+    SLEEP_2;
   }
 }
 

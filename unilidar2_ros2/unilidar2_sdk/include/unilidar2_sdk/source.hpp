@@ -13,6 +13,8 @@
 
 namespace unilidar2
 {
+#define SLEEP_2 std::this_thread::sleep_for(std::chrono::milliseconds(2))
+
 class Source
 {
 protected:
