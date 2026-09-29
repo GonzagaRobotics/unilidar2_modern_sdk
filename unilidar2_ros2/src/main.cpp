@@ -58,29 +58,27 @@ public:
     //     cloud_pub_->publish(cloud_msg);
     // }
 
-    // auto imu = lidar_.get_imu();
+    auto imu = lidar_->get_imu();
 
-    // if (imu)
-    // {
-    //     sensor_msgs::msg::Imu imu_msg;
-    //     imu_msg.header.stamp.sec = imu->info.stamp.sec;
-    //     imu_msg.header.stamp.nanosec = imu->info.stamp.nsec;
-    //     imu_msg.header.frame_id = "l2_imu";
-    //     // TODO: Does the L2 use WXYZ or XYZW?
-    //     imu_msg.orientation.x = imu->quaternion[0];
-    //     imu_msg.orientation.y = imu->quaternion[1];
-    //     imu_msg.orientation.z = imu->quaternion[2];
-    //     imu_msg.orientation.w = imu->quaternion[3];
-    //     imu_msg.angular_velocity.x = imu->angular_velocity[0];
-    //     imu_msg.angular_velocity.y = imu->angular_velocity[1];
-    //     imu_msg.angular_velocity.z = imu->angular_velocity[2];
-    //     imu_msg.linear_acceleration.x = imu->linear_acceleration[0];
-    //     imu_msg.linear_acceleration.y = imu->linear_acceleration[1];
-    //     imu_msg.linear_acceleration.z = imu->linear_acceleration[2];
-    //     imu_pub_->publish(imu_msg);
+    if (imu) {
+      sensor_msgs::msg::Imu imu_msg;
+      imu_msg.header.stamp.sec = imu->info.stamp.sec;
+      imu_msg.header.stamp.nanosec = imu->info.stamp.nsec;
+      imu_msg.header.frame_id = "l2_imu";
+      imu_msg.orientation.w = imu->quaternion[0];
+      imu_msg.orientation.x = imu->quaternion[1];
+      imu_msg.orientation.y = imu->quaternion[2];
+      imu_msg.orientation.z = imu->quaternion[3];
+      imu_msg.angular_velocity.x = imu->angular_velocity[0];
+      imu_msg.angular_velocity.y = imu->angular_velocity[1];
+      imu_msg.angular_velocity.z = imu->angular_velocity[2];
+      imu_msg.linear_acceleration.x = imu->linear_acceleration[0];
+      imu_msg.linear_acceleration.y = imu->linear_acceleration[1];
+      imu_msg.linear_acceleration.z = imu->linear_acceleration[2];
+      imu_pub_->publish(imu_msg);
 
-    //     // TODO: Publish TF
-    // }
+      // TODO: Publish TF2
+    }
   }
 };
 

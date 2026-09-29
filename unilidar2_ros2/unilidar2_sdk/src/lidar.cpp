@@ -52,6 +52,11 @@ void Lidar::rx_worker()
       } else if (ack_block_) {
         continue;  // If we're waiting for an ACK, ignore other packet types
       }
+
+      if (res.packet_type == IMU_DATA_PACKET_TYPE) {
+        std::unique_ptr<ImuData> imu_data(reinterpret_cast<ImuData *>(res.data.release()));
+        imu_buffer_.push(std::move(imu_data));
+      }
     }
 
     lock.unlock();
