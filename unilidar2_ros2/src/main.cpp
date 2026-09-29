@@ -1,8 +1,9 @@
-#include "pcl_conversions/pcl_conversions.h"
-#include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/imu.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
-#include "tf2_ros/transform_broadcaster.h"
+#include <pcl_conversions/pcl_conversions.h>
+
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
 #include "unilidar2_sdk/enet_source.hpp"
 #include "unilidar2_sdk/lidar.hpp"
 
@@ -15,10 +16,8 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
 
-  tf2_ros::TransformBroadcaster tf_broadcaster_;
-
 public:
-  Node() : rclcpp::Node("unilidar2_node", "l2"), tf_broadcaster_(this)
+  Node() : rclcpp::Node("unilidar2_node", "l2")
   {
     auto source = std::make_unique<unilidar2::EnetSource>("192.168.1.2", 6201, "192.168.1.62", 6101);
     lidar_ = std::make_unique<unilidar2::Lidar>(std::move(source));
@@ -49,14 +48,13 @@ public:
 
   void timer_cb()
   {
-    // auto cloud = lidar_.get_cloud();
+    auto cloud = lidar_->get_cloud();
 
-    // if (cloud && !cloud->empty())
-    // {
-    //     sensor_msgs::msg::PointCloud2 cloud_msg;
-    //     pcl::toROSMsg(*cloud, cloud_msg);
-    //     cloud_pub_->publish(cloud_msg);
-    // }
+    if (cloud && !cloud->empty()) {
+      sensor_msgs::msg::PointCloud2 cloud_msg;
+      pcl::toROSMsg(*cloud, cloud_msg);
+      cloud_pub_->publish(cloud_msg);
+    }
 
     auto imu = lidar_->get_imu();
 
