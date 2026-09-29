@@ -33,8 +33,18 @@ void unilidar2::Source::rx_worker()
         break;
       }
 
-      // TODO: Process the packet
       buffer_head += res.size + 24;  // Move past the packet header and tail
+
+      if (res.packet_type == ACK_DATA_PACKET_TYPE) {
+        AckData * ack = reinterpret_cast<AckData *>(res.data.get());
+        std::cout << "Received ACK: " << ack_packet_to_string(ack) << std::endl;
+
+        ack_block_ = false;  // Clear the ack_block_ flag to indicate that the ACK has been received
+      } else if (ack_block_) {
+        continue;  // If we're waiting for an ACK, ignore other packet types
+      }
+
+      // std::cout << "Received packet: " << packet_type_to_string(res.packet_type) << ", size: " << res.size << std::endl;
     }
 
     SLEEP_2;

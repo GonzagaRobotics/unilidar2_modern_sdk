@@ -72,7 +72,7 @@ std::string ack_packet_to_string(const AckData * ack)
       break;
   }
 
-  return "ACK packet_type: " + std::to_string(ack->packet_type) + ", cmd_type: " + std::to_string(ack->cmd_type) +
+  return "packet_type: " + std::to_string(ack->packet_type) + ", cmd_type: " + std::to_string(ack->cmd_type) +
          ", cmd_value: " + std::to_string(ack->cmd_value) + ", status: " + status;
 }
 
