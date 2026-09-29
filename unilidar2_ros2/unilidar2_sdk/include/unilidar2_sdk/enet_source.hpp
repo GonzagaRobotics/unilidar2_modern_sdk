@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <string>
+
 #include "unilidar2_sdk/source.hpp"
 
 namespace unilidar2

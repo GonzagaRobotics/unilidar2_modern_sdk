@@ -26,18 +26,9 @@ unilidar2::EnetSource::EnetSource(
   remote_addr_.sin_family = AF_INET;
   remote_addr_.sin_addr.s_addr = inet_addr(remote_ip.c_str());
   remote_addr_.sin_port = htons(remote_port);
-
-  running_ = true;
-  rx_thread_ = std::unique_ptr<std::thread>(new std::thread(&EnetSource::rx_worker, this));
 }
 
-unilidar2::EnetSource::~EnetSource()
-{
-  running_ = false;
-  rx_thread_->join();
-
-  close(sock_fd_);
-}
+unilidar2::EnetSource::~EnetSource() { close(sock_fd_); }
 
 size_t unilidar2::EnetSource::get_data(uint8_t * buffer, size_t buffer_size)
 {

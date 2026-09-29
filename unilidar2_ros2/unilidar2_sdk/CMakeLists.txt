@@ -10,7 +10,7 @@ find_package(PCL REQUIRED COMPONENTS common)
 include_directories(include/unilidar2_sdk)
 include_directories(${PCL_INCLUDE_DIRS})
 
-add_library(unilidar2_sdk STATIC src/lidar.cpp src/enet_source.cpp src/source.cpp src/decoding.cpp)
+add_library(unilidar2_sdk STATIC src/lidar.cpp src/enet_source.cpp src/decoding.cpp src/out_buffer.cpp)
 target_link_libraries(unilidar2_sdk PRIVATE ZLIB::ZLIB PUBLIC ${PCL_LIBRARIES})
 
 target_include_directories(unilidar2_sdk PUBLIC include)
