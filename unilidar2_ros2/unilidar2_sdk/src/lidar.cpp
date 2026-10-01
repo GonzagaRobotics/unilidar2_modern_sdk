@@ -92,8 +92,6 @@ void Lidar::merge_point_data(const PointData * point_data)
   float alpha_c = alpha_b;
   float alpha_s = point_data->angle_increment;
 
-  // std::cout << theta_c << " -> " << theta_c + theta_s * num_pts << std::endl;
-
   if (!active_cloud_) {
     active_cloud_ = std::make_unique<pcl::PointCloud<pcl::PointXYZI>>();
     active_cloud_->header.frame_id = "lidar_link";
@@ -107,7 +105,7 @@ void Lidar::merge_point_data(const PointData * point_data)
     }
   }
 
-  active_cloud_->resize(active_cloud_->size() + num_pts);
+  active_cloud_->reserve(active_cloud_->size() + num_pts);
 
   for (int i = 0; i < num_pts; i++, theta_c += theta_s, alpha_c += alpha_s) {
     // Skip points of range 0, which are invalid.
