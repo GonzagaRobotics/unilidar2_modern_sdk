@@ -2,6 +2,7 @@
 
 #include <zlib.h>
 
+#include <cmath>
 #include <iostream>
 
 #include "unilidar2_sdk/decoding.hpp"
@@ -49,6 +50,7 @@ void Lidar::rx_worker()
         std::cout << "Received ACK: " << ack_packet_to_string(ack) << std::endl;
 
         ack_block_ = false;  // Clear the ack_block_ flag to indicate that the ACK has been received
+        continue;            // No further processing needed for ACK packets
       } else if (ack_block_) {
         continue;  // If we're waiting for an ACK, ignore other packet types
       }
@@ -56,11 +58,95 @@ void Lidar::rx_worker()
       if (res.packet_type == IMU_DATA_PACKET_TYPE) {
         std::unique_ptr<ImuData> imu_data(reinterpret_cast<ImuData *>(res.data.release()));
         imu_buffer_.push(std::move(imu_data));
+      } else if (res.packet_type == POINT_DATA_PACKET_TYPE) {
+        std::unique_ptr<PointData> point_data(reinterpret_cast<PointData *>(res.data.release()));
+        merge_point_data(point_data.get());
+      } else {
+        std::cerr << "Received unexpected packet type: " << res.packet_type << std::endl;
       }
     }
 
     lock.unlock();
     SLEEP_2;
+  }
+}
+
+void Lidar::merge_point_data(const PointData * point_data)
+{
+  // FIXME: Can cause incorrect clouds if data arrives out of order in the right circumstance
+
+  // Intermediate calibration values
+  float sin_beta = sin(point_data->param.beta_angle);
+  float cos_beta = cos(point_data->param.beta_angle);
+  float sin_xi = sin(point_data->param.xi_angle);
+  float cos_xi = cos(point_data->param.xi_angle);
+  float cos_beta_sin_xi = cos_beta * sin_xi;
+  float sin_beta_cos_xi = sin_beta * cos_xi;
+  float cos_beta_cos_xi = cos_beta * cos_xi;
+  float sin_beta_sin_xi = sin_beta * sin_xi;
+
+  int num_pts = point_data->point_num;
+  float theta_c = point_data->com_horizontal_angle_start;
+  float theta_s = point_data->com_horizontal_angle_step;
+  float alpha_b = point_data->angle_min;
+  float alpha_c = alpha_b;
+  float alpha_s = point_data->angle_increment;
+
+  // std::cout << theta_c << " -> " << theta_c + theta_s * num_pts << std::endl;
+
+  if (!active_cloud_) {
+    active_cloud_ = std::make_unique<pcl::PointCloud<pcl::PointXYZI>>();
+    active_cloud_->header.frame_id = "lidar_link";
+    active_cloud_->is_dense = false;
+    active_cloud_->height = 1;
+    active_cloud_->width = 0;
+
+    azimuth_rot_ = 0;
+    if (last_azimuth_ < 0) {
+      last_azimuth_ = theta_c;
+    }
+  }
+
+  active_cloud_->resize(active_cloud_->size() + num_pts);
+
+  for (int i = 0; i < num_pts; i++, theta_c += theta_s, alpha_c += alpha_s) {
+    // Skip points of range 0, which are invalid.
+    if (point_data->ranges[i] == 0) {
+      continue;
+    }
+
+    // Convert to meters and apply its calibration.
+    float range = point_data->param.range_scale * (point_data->ranges[i] + point_data->param.range_bias);
+
+    // Skip points outside the valid range.
+    if (range < point_data->range_min || range > point_data->range_max) {
+      continue;
+    }
+
+    // Transform to cartesian coordinates and add in calibration
+    float sin_theta = sin(theta_c);
+    float cos_theta = cos(theta_c);
+    float sin_alpha = sin(alpha_c);
+    float cos_alpha = cos(alpha_c);
+
+    float A = (-cos_beta_sin_xi * sin_beta_cos_xi * sin_alpha) * range + point_data->param.b_axis_dist;
+    float B = cos_alpha * cos_xi * range;
+    float C = (sin_beta_sin_xi + cos_beta_cos_xi * sin_alpha) * range;
+
+    pcl::PointXYZI point;
+    point.x = A * cos_theta - B * sin_theta;
+    point.y = A * sin_theta + B * cos_theta;
+    point.z = C + point_data->param.a_axis_dist;
+    point.intensity = point_data->intensities[i] / 255.0f;
+    active_cloud_->push_back(point);
+  }
+
+  azimuth_rot_ += (theta_c - last_azimuth_) + theta_s * num_pts;
+  last_azimuth_ = theta_c;
+
+  if (azimuth_rot_ >= kTau) {
+    active_cloud_->header.stamp = point_data->info.stamp.sec * 1000000000ULL + point_data->info.stamp.nsec;
+    cloud_buffer_.push(std::move(active_cloud_));
   }
 }
 
