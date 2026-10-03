@@ -1,5 +1,6 @@
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <chrono>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -25,21 +26,14 @@ public:
     auto rt_qos = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile();
 
     cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
-    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", rt_qos);
-
-    // Set work mode and sync time with Lidar before doing anything else
-
-    if (!lidar_->set_work_mode(true)) {
-      RCLCPP_ERROR(get_logger(), "Failed to set work mode on Lidar");
-      return;
-    }
+    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu/data", rt_qos);
 
     auto now = get_clock()->now();
     uint32_t sec = now.nanoseconds() / 1000000000;
     uint32_t nsec = now.nanoseconds() % 1000000000;
 
-    if (!lidar_->sync_time(sec, nsec, true)) {
-      RCLCPP_ERROR(get_logger(), "Failed to sync time with Lidar");
+    if (!lidar_->sync_time(sec, nsec)) {
+      RCLCPP_ERROR(get_logger(), "Init Fault: Time sync");
       return;
     }
 
@@ -62,7 +56,7 @@ public:
       sensor_msgs::msg::Imu imu_msg;
       imu_msg.header.stamp.sec = imu->info.stamp.sec;
       imu_msg.header.stamp.nanosec = imu->info.stamp.nsec;
-      imu_msg.header.frame_id = "l2_imu";
+      imu_msg.header.frame_id = "imu_link";
       imu_msg.orientation.w = imu->quaternion[0];
       imu_msg.orientation.x = imu->quaternion[1];
       imu_msg.orientation.y = imu->quaternion[2];

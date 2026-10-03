@@ -16,6 +16,7 @@ constexpr uint8_t FRAME_TAIL_BYTE_1 = 0xFF;
 
 // Packet types
 
+const uint32_t USER_CMD_PACKET_TYPE = 100;
 const uint32_t ACK_DATA_PACKET_TYPE = 101;
 const uint32_t POINT_DATA_PACKET_TYPE = 102;
 

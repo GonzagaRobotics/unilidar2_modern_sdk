@@ -24,13 +24,13 @@ void Lidar::rx_worker()
       std::cerr << "Error in get_data: " << e.what() << std::endl;
 
       lock.unlock();
-      SLEEP_2;
+      SLEEP_MS(2);
       continue;
     }
 
     if (n == 0) {
       lock.unlock();
-      SLEEP_2;
+      SLEEP_MS(2);
       continue;
     }
 
@@ -67,7 +67,7 @@ void Lidar::rx_worker()
     }
 
     lock.unlock();
-    SLEEP_2;
+    SLEEP_MS(2);
   }
 }
 
@@ -142,7 +142,7 @@ void Lidar::merge_point_data(const PointData * point_data)
   azimuth_rot_ += (theta_c - last_azimuth_) + theta_s * num_pts;
   last_azimuth_ = theta_c;
 
-  if (azimuth_rot_ >= kTau) {
+  if (azimuth_rot_ >= TAU) {
     active_cloud_->header.stamp = point_data->info.stamp.sec * 1000000000ULL + point_data->info.stamp.nsec;
     cloud_buffer_.push(std::move(active_cloud_));
   }
@@ -154,6 +154,9 @@ bool Lidar::send_packet(const void * data, size_t size, bool blocking)
 
   if (blocking) {
     ack_block_ = true;
+    // Blocking calls indicate that the data we have is now stale
+    imu_buffer_.clear();
+    cloud_buffer_.clear();
   }
 
   try {
@@ -200,45 +203,73 @@ Lidar::~Lidar()
   rx_thread_->join();
 }
 
-bool Lidar::set_work_mode(bool negative_angle)
+bool Lidar::set_work_mode(bool negative_angle, bool coord_3d, bool imu, bool comm_enet, bool auto_start)
 {
   WorkModeConfigPacket packet{};
-  packet.header.header[0] = FRAME_HEADER_BYTE_0;
-  packet.header.header[1] = FRAME_HEADER_BYTE_1;
-  packet.header.header[2] = FRAME_HEADER_BYTE_2;
-  packet.header.header[3] = FRAME_HEADER_BYTE_3;
-  packet.header.packet_type = WORK_MODE_CONFIG_PACKET_TYPE;
-  packet.header.packet_size = sizeof(packet);
+  PACKET_HEADER(WORK_MODE_CONFIG_PACKET_TYPE)
 
-  packet.data.mode = negative_angle ? 1 : 0;
+  packet.data.mode |= negative_angle ? 1 : 0;
+  packet.data.mode |= !coord_3d ? 2 : 0;
+  packet.data.mode |= !imu ? 4 : 0;
+  packet.data.mode |= !comm_enet ? 8 : 0;
+  packet.data.mode |= !auto_start ? 16 : 0;
+  // Rest is reserved
 
-  packet.tail.tail[0] = FRAME_TAIL_BYTE_0;
-  packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
-  uint32_t crc = crc32(0L, Z_NULL, 0);
-  packet.tail.crc32 = crc32(crc, reinterpret_cast<const uint8_t *>(&packet.data), sizeof(packet.data));
+  PACKET_TAIL
 
   return send_packet(&packet, sizeof(packet), true);
 }
 
-bool Lidar::sync_time(uint32_t sec, uint32_t nsec, bool block)
+bool Lidar::sync_time(uint32_t sec, uint32_t nsec)
 {
   TimeStampPacket packet{};
+  PACKET_HEADER(TIME_STAMP_PACKET_TYPE)
+
   packet.data.sec = sec;
   packet.data.nsec = nsec;
 
-  packet.header.header[0] = FRAME_HEADER_BYTE_0;
-  packet.header.header[1] = FRAME_HEADER_BYTE_1;
-  packet.header.header[2] = FRAME_HEADER_BYTE_2;
-  packet.header.header[3] = FRAME_HEADER_BYTE_3;
-  packet.header.packet_type = TIME_STAMP_PACKET_TYPE;
-  packet.header.packet_size = sizeof(packet);
+  PACKET_TAIL
 
-  packet.tail.tail[0] = FRAME_TAIL_BYTE_0;
-  packet.tail.tail[1] = FRAME_TAIL_BYTE_1;
-  auto crc = crc32(0L, Z_NULL, 0);
-  packet.tail.crc32 = crc32(crc, reinterpret_cast<const uint8_t *>(&packet.data), sizeof(packet.data));
+  return send_packet(&packet, sizeof(packet), true);
+}
 
-  return send_packet(&packet, sizeof(packet), block);
+bool Lidar::reset()
+{
+  UserCtrlCmdPacket packet{};
+  PACKET_HEADER(USER_CMD_PACKET_TYPE)
+
+  packet.data.type = USER_CMD_RESET_TYPE;
+  packet.data.value = 0;
+
+  PACKET_TAIL
+
+  return send_packet(&packet, sizeof(packet), true);
+}
+
+bool Lidar::stop_rotation()
+{
+  UserCtrlCmdPacket packet{};
+  PACKET_HEADER(USER_CMD_PACKET_TYPE)
+
+  packet.data.type = USER_CMD_STANDBY_TYPE;
+  packet.data.value = 1;
+
+  PACKET_TAIL
+
+  return send_packet(&packet, sizeof(packet), true);
+}
+
+bool Lidar::start_rotation()
+{
+  UserCtrlCmdPacket packet{};
+  PACKET_HEADER(USER_CMD_PACKET_TYPE)
+
+  packet.data.type = USER_CMD_STANDBY_TYPE;
+  packet.data.value = 0;
+
+  PACKET_TAIL
+
+  return send_packet(&packet, sizeof(packet), true);
 }
 
 }  // namespace unilidar2
