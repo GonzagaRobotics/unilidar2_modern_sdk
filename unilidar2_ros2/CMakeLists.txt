@@ -28,9 +28,15 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+# Main node
 add_executable(unilidar2_node src/main.cpp)
 target_link_libraries(unilidar2_node unilidar2_sdk)
 ament_target_dependencies(unilidar2_node rclcpp sensor_msgs tf2_ros pcl_conversions)
+
+# Helper program
+add_executable(unilidar2_set_mode src/set_mode.cpp)
+target_link_libraries(unilidar2_set_mode unilidar2_sdk)
+ament_target_dependencies(unilidar2_set_mode rclcpp)
 
 # Install launch files to the share directory
 install(
@@ -38,5 +44,5 @@ install(
   DESTINATION share/${PROJECT_NAME}/
 )
 
-install(TARGETS unilidar2_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS unilidar2_node unilidar2_set_mode DESTINATION lib/${PROJECT_NAME})
 ament_package()

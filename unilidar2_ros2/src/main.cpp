@@ -1,11 +1,12 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <chrono>
+#include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include "unilidar2_sdk/enet_source.hpp"
+#include "source_params.hpp"
 #include "unilidar2_sdk/lidar.hpp"
 
 class Node : public rclcpp::Node
@@ -20,22 +21,10 @@ private:
 public:
   Node() : rclcpp::Node("unilidar2_node", "l2")
   {
-    auto source = std::make_unique<unilidar2::EnetSource>("192.168.1.2", 6201, "192.168.1.62", 6101);
-    lidar_ = std::make_unique<unilidar2::Lidar>(std::move(source));
+    lidar_ = std::make_unique<unilidar2::Lidar>(make_source(*this));
 
-    auto rt_qos = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort().durability_volatile();
-
-    cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
-    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu/data", rt_qos);
-
-    auto now = get_clock()->now();
-    uint32_t sec = now.nanoseconds() / 1000000000;
-    uint32_t nsec = now.nanoseconds() % 1000000000;
-
-    if (!lidar_->sync_time(sec, nsec)) {
-      RCLCPP_ERROR(get_logger(), "Init Fault: Time sync");
-      return;
-    }
+    cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 5);
+    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu/data", rclcpp::SensorDataQoS());
 
     timer_ = create_wall_timer(std::chrono::milliseconds(1), std::bind(&Node::timer_cb, this));
   }

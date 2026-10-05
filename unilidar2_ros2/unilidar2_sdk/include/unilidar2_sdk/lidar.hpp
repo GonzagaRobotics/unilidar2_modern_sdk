@@ -5,6 +5,7 @@
 #include <mutex>
 #include <thread>
 
+#include "clock_sync.hpp"
 #include "messages.hpp"
 #include "out_buffer.hpp"
 #include "pcl/impl/point_types.hpp"
@@ -44,9 +45,11 @@ private:
   std::mutex mutex_;
 
   uint8_t buffer_[8192];
+  ClockSync clock_sync_;
 
-  float azimuth_rot_;
-  float last_azimuth_ = -1;
+  float azimuth_rot_ = 0;      // Horizontal rotation accumulated by the active cloud (radians)
+  float last_azimuth_ = 0;     // Horizontal start angle of the previous point packet (radians)
+  bool have_azimuth_ = false;  // True once last_azimuth_ holds a real angle
   std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> active_cloud_;
 
   void rx_worker();

@@ -34,6 +34,8 @@ void Lidar::rx_worker()
       continue;
     }
 
+    int64_t rx_time_ns = ClockSync::host_now_ns();
+
     while (n - buffer_head > 0) {
       DecodeRes res;
       try {
@@ -57,17 +59,20 @@ void Lidar::rx_worker()
 
       if (res.packet_type == IMU_DATA_PACKET_TYPE) {
         std::unique_ptr<ImuData> imu_data(reinterpret_cast<ImuData *>(res.data.release()));
+        imu_data->info.stamp = clock_sync_.update(imu_data->info.stamp, rx_time_ns);
         imu_buffer_.push(std::move(imu_data));
       } else if (res.packet_type == POINT_DATA_PACKET_TYPE) {
         std::unique_ptr<PointData> point_data(reinterpret_cast<PointData *>(res.data.release()));
+        point_data->info.stamp = clock_sync_.update(point_data->info.stamp, rx_time_ns);
         merge_point_data(point_data.get());
       } else {
         std::cerr << "Received unexpected packet type: " << res.packet_type << std::endl;
       }
     }
 
+    // Data was available, so immediately check for more instead of sleeping. Sleeping after every datagram caps the
+    // read rate below the L2's packet rate and lets the socket buffer overflow.
     lock.unlock();
-    SLEEP_MS(2);
   }
 }
 
@@ -98,12 +103,15 @@ void Lidar::merge_point_data(const PointData * point_data)
     active_cloud_->is_dense = false;
     active_cloud_->height = 1;
     active_cloud_->width = 0;
-
-    azimuth_rot_ = 0;
-    if (last_azimuth_ < 0) {
-      last_azimuth_ = theta_c;
-    }
   }
+
+  // Track the horizontal rotation using the start angle of each packet. The difference is wrapped into [-pi, pi)
+  // so the jump where the angle wraps around 2pi -> 0 still counts as a small forward step.
+  if (have_azimuth_) {
+    azimuth_rot_ += std::remainder(theta_c - last_azimuth_, TAU);
+  }
+  last_azimuth_ = theta_c;
+  have_azimuth_ = true;
 
   active_cloud_->reserve(active_cloud_->size() + num_pts);
 
@@ -139,11 +147,12 @@ void Lidar::merge_point_data(const PointData * point_data)
     active_cloud_->push_back(point);
   }
 
-  azimuth_rot_ += (theta_c - last_azimuth_) + theta_s * num_pts;
-  last_azimuth_ = theta_c;
+  if (std::fabs(azimuth_rot_) >= TAU) {
+    // Carry the overshoot into the next cloud so cloud boundaries don't drift
+    azimuth_rot_ = std::fmod(azimuth_rot_, TAU);
 
-  if (azimuth_rot_ >= TAU) {
-    active_cloud_->header.stamp = point_data->info.stamp.sec * 1000000000ULL + point_data->info.stamp.nsec;
+    // PCL stamps are in microseconds
+    active_cloud_->header.stamp = point_data->info.stamp.sec * 1000000ULL + point_data->info.stamp.nsec / 1000;
     cloud_buffer_.push(std::move(active_cloud_));
   }
 }
