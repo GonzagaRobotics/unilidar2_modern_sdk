@@ -60,7 +60,22 @@ void Lidar::rx_worker()
       if (res.packet_type == IMU_DATA_PACKET_TYPE) {
         std::unique_ptr<ImuData> imu_data(reinterpret_cast<ImuData *>(res.data.release()));
         imu_data->info.stamp = clock_sync_.update(imu_data->info.stamp, rx_time_ns);
-        imu_buffer_.push(std::move(imu_data));
+
+        // Downsample to 100 Hz. The deadline advances by a fixed period rather than resetting to the accepted stamp,
+        // otherwise the output rate snaps to the next multiple of the IMU period (e.g. 12 ms -> 83 Hz for a 250 Hz IMU)
+        constexpr int64_t IMU_PERIOD_NS = 10000000;
+        int64_t stamp_ns = int64_t(imu_data->info.stamp.sec) * 1000000000 + imu_data->info.stamp.nsec;
+
+        // A stamp more than a period behind the deadline means the clock jumped backwards, so accept it and resync
+        bool jumped_back = stamp_ns < next_imu_ns_ - IMU_PERIOD_NS;
+        if (stamp_ns < next_imu_ns_ && !jumped_back) {
+          continue;  // Ignore this packet
+        }
+
+        // Resync after a gap or a clock jump instead of bursting to catch up
+        next_imu_ns_ = (jumped_back || stamp_ns - next_imu_ns_ >= IMU_PERIOD_NS) ? stamp_ns + IMU_PERIOD_NS
+                                                                                 : next_imu_ns_ + IMU_PERIOD_NS;
+        latest_imu_ = std::move(imu_data);
       } else if (res.packet_type == POINT_DATA_PACKET_TYPE) {
         std::unique_ptr<PointData> point_data(reinterpret_cast<PointData *>(res.data.release()));
         point_data->info.stamp = clock_sync_.update(point_data->info.stamp, rx_time_ns);
@@ -153,7 +168,7 @@ void Lidar::merge_point_data(const PointData * point_data)
 
     // PCL stamps are in microseconds
     active_cloud_->header.stamp = point_data->info.stamp.sec * 1000000ULL + point_data->info.stamp.nsec / 1000;
-    cloud_buffer_.push(std::move(active_cloud_));
+    latest_cloud_ = std::move(active_cloud_);
   }
 }
 
@@ -163,9 +178,9 @@ bool Lidar::send_packet(const void * data, size_t size, bool blocking)
 
   if (blocking) {
     ack_block_ = true;
-    // Blocking calls indicate that the data we have is now stale
-    imu_buffer_.clear();
-    cloud_buffer_.clear();
+    active_cloud_ = nullptr;
+    latest_cloud_ = nullptr;
+    latest_imu_ = nullptr;
   }
 
   try {

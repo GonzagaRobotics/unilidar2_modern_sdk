@@ -7,7 +7,6 @@
 
 #include "clock_sync.hpp"
 #include "messages.hpp"
-#include "out_buffer.hpp"
 #include "pcl/impl/point_types.hpp"
 #include "pcl/point_cloud.h"
 #include "pcl/point_types.h"
@@ -52,10 +51,12 @@ private:
   bool have_azimuth_ = false;  // True once last_azimuth_ holds a real angle
   std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> active_cloud_;
 
+  int64_t next_imu_ns_ = 0;  // Earliest device stamp (ns) at which the next IMU sample is accepted
+
   void rx_worker();
 
-  OutBuffer<pcl::PointCloud<pcl::PointXYZI>> cloud_buffer_;
-  OutBuffer<ImuData> imu_buffer_;
+  std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> latest_cloud_;
+  std::unique_ptr<ImuData> latest_imu_;
 
   void merge_point_data(const PointData * point_data);
 
@@ -96,7 +97,7 @@ public:
   /// @return True if the command was sent and acknowledged, false otherwise.
   bool start_rotation();
 
-  std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> get_cloud() { return cloud_buffer_.pop(); }
-  std::unique_ptr<ImuData> get_imu() { return imu_buffer_.pop(); }
+  std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> get_cloud() { return std::move(latest_cloud_); }
+  std::unique_ptr<ImuData> get_imu() { return std::move(latest_imu_); }
 };
 }  // namespace unilidar2
