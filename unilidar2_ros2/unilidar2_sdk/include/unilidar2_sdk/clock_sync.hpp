@@ -49,6 +49,10 @@ public:
   /// @return The device timestamp converted to host time.
   TimeStamp update(const TimeStamp & device, int64_t host_ns);
 
+  /// @brief Host seconds elapsed per device second, used to correct device durations for clock skew.
+  /// @return The fitted rate, or 1 until there's enough data to estimate it.
+  double rate() const;
+
   /// @brief The current host system clock time in nanoseconds since the epoch.
   static int64_t host_now_ns()
   {

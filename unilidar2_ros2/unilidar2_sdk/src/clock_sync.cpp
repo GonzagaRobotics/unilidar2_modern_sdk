@@ -25,6 +25,8 @@ double ClockSync::device_seconds(const TimeStamp & device) const
 
 bool ClockSync::fit_valid() const { return weight_ > 0 && cov_xx_ / weight_ > MIN_SPREAD * MIN_SPREAD; }
 
+double ClockSync::rate() const { return fit_valid() ? cov_xy_ / cov_xx_ : 1.0; }
+
 TimeStamp ClockSync::update(const TimeStamp & device, int64_t host_ns)
 {
   if (!initialized_) {
