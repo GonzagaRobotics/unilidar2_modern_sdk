@@ -4,9 +4,11 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 #include "clock_sync.hpp"
 #include "messages.hpp"
+#include "out_buffer.hpp"
 #include "pcl/impl/point_types.hpp"
 #include "pcl/point_cloud.h"
 #include "pcl/point_types.h"
@@ -32,6 +34,18 @@ namespace unilidar2
 
 constexpr float TAU = 6.28318530718;
 
+/// @brief One full horizontal sweep of points.
+struct Cloud
+{
+  /// Points of the sweep. header.stamp (microseconds, host time) is the start of the sweep.
+  pcl::PointCloud<pcl::PointXYZI> cloud;
+  /// Capture time of each point as an offset from header.stamp in microseconds (>= 0), parallel to cloud.points.
+  std::vector<float> t_us;
+  /// Index of the minor (vertical) sweep each point belongs to, counted from 0 at the start of the cloud. Parallel to
+  /// cloud.points.
+  std::vector<uint16_t> ring;
+};
+
 class Lidar
 {
 private:
@@ -49,14 +63,16 @@ private:
   float azimuth_rot_ = 0;      // Horizontal rotation accumulated by the active cloud (radians)
   float last_azimuth_ = 0;     // Horizontal start angle of the previous point packet (radians)
   bool have_azimuth_ = false;  // True once last_azimuth_ holds a real angle
-  std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> active_cloud_;
-
-  int64_t next_imu_ns_ = 0;  // Earliest device stamp (ns) at which the next IMU sample is accepted
+  float last_alpha_ = 0;       // Vertical angle of the previous raw point, wrapped to [0, 2pi) (radians)
+  bool have_alpha_ = false;    // True once last_alpha_ holds a real angle
+  uint16_t minor_sweep_ = 0;   // Minor sweep index within the active cloud
+  std::unique_ptr<Cloud> active_cloud_;
+  std::vector<int64_t> active_stamps_ns_;  // Absolute host capture time (ns) of each point in the active cloud
 
   void rx_worker();
 
-  std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> latest_cloud_;
-  std::unique_ptr<ImuData> latest_imu_;
+  OutBuffer<Cloud> cloud_buffer_;
+  OutBuffer<ImuData> imu_buffer_;
 
   void merge_point_data(const PointData * point_data);
 
@@ -97,7 +113,12 @@ public:
   /// @return True if the command was sent and acknowledged, false otherwise.
   bool start_rotation();
 
-  std::unique_ptr<pcl::PointCloud<pcl::PointXYZI>> get_cloud() { return std::move(latest_cloud_); }
-  std::unique_ptr<ImuData> get_imu() { return std::move(latest_imu_); }
+  /// @brief Take the oldest buffered sweep. Thread safe.
+  /// @return The sweep, or nullptr if none are buffered.
+  std::unique_ptr<Cloud> get_cloud();
+
+  /// @brief Take the oldest buffered IMU sample. Thread safe.
+  /// @return The sample, or nullptr if none are buffered.
+  std::unique_ptr<ImuData> get_imu();
 };
 }  // namespace unilidar2

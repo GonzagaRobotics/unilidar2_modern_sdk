@@ -51,7 +51,8 @@ inline std::unique_ptr<unilidar2::Source> make_source(rclcpp::Node & node)
   }
 
   if (connection == "uart") {
-    throw std::invalid_argument("UART connection is not yet implemented");
+    RCLCPP_INFO(node.get_logger(), "Connecting over UART: %s", uart_port.c_str());
+    return std::make_unique<unilidar2::UartSource>(uart_port);
   }
 
   throw std::invalid_argument("Parameter 'connection' must be 'enet' or 'uart', got '" + connection + "'");
